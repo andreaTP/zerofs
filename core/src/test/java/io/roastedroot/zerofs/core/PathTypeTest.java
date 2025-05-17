@@ -38,14 +38,14 @@ public class PathTypeTest {
         assertEquals(names2[1], "two");
     }
 
-//    @Test
-//    public void testToString() {
-//        ParseResult path = type.parsePath("foo/bar\\baz");
-//        assertThat(type.toString(path.root(), path.names())).isEqualTo("foo/bar/baz");
-//
-//        ParseResult path2 = type.parsePath("$/foo/bar");
-//        assertThat(type.toString(path2.root(), path2.names())).isEqualTo("$foo/bar");
-//    }
+    @Test
+    public void testToString() {
+        PathType.ParseResult path = type.parsePath("foo/bar\\baz");
+        assertEquals("foo/bar/baz", type.toString(path.root(), path.names()));
+
+        PathType.ParseResult path2 = type.parsePath("$/foo/bar");
+        assertEquals("$foo/bar", type.toString(path2.root(), path2.names()));
+    }
 //
 //    @Test
 //    public void testToUri() {

@@ -22,7 +22,7 @@ import java.util.List;
 import java.util.Objects;
 
 /**
- * Jimfs implementation of {@link Path}. Creation of new {@code Path} objects is delegated to the
+ * ZeroFs implementation of {@link Path}. Creation of new {@code Path} objects is delegated to the
  * file system's {@link PathService}.
  *
  * @author Colin Decker
@@ -74,13 +74,13 @@ final class ZeroFsPath implements Path {
     }
 
     /**
-     * Equivalent to {@link #getFileSystem()} but with a return type of {@code JimfsFileSystem}.
+     * Equivalent to {@link #getFileSystem()} but with a return type of {@code ZeroFsFileSystem}.
      * {@code getFileSystem()}'s return type is left as {@code FileSystem} to make testing paths
      * easier (as long as methods that access the file system in some way are not called, the file
      * system can be a fake file system instance).
      */
-    public JimfsFileSystem getJimfsFileSystem() {
-        return (JimfsFileSystem) pathService.getFileSystem();
+    public ZeroFsFileSystem getZeroFsFileSystem() {
+        return (ZeroFsFileSystem) pathService.getFileSystem();
     }
 
     @Override
@@ -89,7 +89,7 @@ final class ZeroFsPath implements Path {
     }
 
     @Override
-    public @Nullable JimfsPath getRoot() {
+    public @Nullable ZeroFsPath getRoot() {
         if (root == null) {
             return null;
         }
@@ -97,12 +97,12 @@ final class ZeroFsPath implements Path {
     }
 
     @Override
-    public @Nullable JimfsPath getFileName() {
+    public @Nullable ZeroFsPath getFileName() {
         return names.isEmpty() ? null : getName(names.size() - 1);
     }
 
     @Override
-    public @Nullable JimfsPath getParent() {
+    public @Nullable ZeroFsPath getParent() {
         if (names.isEmpty() || (names.size() == 1 && root == null)) {
             return null;
         }
@@ -116,7 +116,7 @@ final class ZeroFsPath implements Path {
     }
 
     @Override
-    public JimfsPath getName(int index) {
+    public ZeroFsPath getName(int index) {
         checkArgument(
                 index >= 0 && index < names.size(),
                 "index (%s) must be >= 0 and < name count (%s)",
@@ -126,7 +126,7 @@ final class ZeroFsPath implements Path {
     }
 
     @Override
-    public JimfsPath subpath(int beginIndex, int endIndex) {
+    public ZeroFsPath subpath(int beginIndex, int endIndex) {
         checkArgument(
                 beginIndex >= 0 && endIndex <= names.size() && endIndex > beginIndex,
                 "beginIndex (%s) must be >= 0; endIndex (%s) must be <= name count (%s) and > beginIndex",
@@ -143,7 +143,7 @@ final class ZeroFsPath implements Path {
 
     @Override
     public boolean startsWith(Path other) {
-        JimfsPath otherPath = checkPath(other);
+        ZeroFsPath otherPath = checkPath(other);
         return otherPath != null
                 && getFileSystem().equals(otherPath.getFileSystem())
                 && Objects.equals(root, otherPath.root)
@@ -157,7 +157,7 @@ final class ZeroFsPath implements Path {
 
     @Override
     public boolean endsWith(Path other) {
-        JimfsPath otherPath = checkPath(other);
+        ZeroFsPath otherPath = checkPath(other);
         if (otherPath == null) {
             return false;
         }
@@ -174,7 +174,7 @@ final class ZeroFsPath implements Path {
     }
 
     @Override
-    public JimfsPath normalize() {
+    public ZeroFsPath normalize() {
         if (isNormal()) {
             return this;
         }
@@ -227,13 +227,13 @@ final class ZeroFsPath implements Path {
     }
 
     /** Resolves the given name against this path. The name is assumed not to be a root name. */
-    JimfsPath resolve(Name name) {
+    ZeroFsPath resolve(Name name) {
         return resolve(pathService.createFileName(name));
     }
 
     @Override
-    public JimfsPath resolve(Path other) {
-        JimfsPath otherPath = checkPath(other);
+    public ZeroFsPath resolve(Path other) {
+        ZeroFsPath otherPath = checkPath(other);
         if (otherPath == null) {
             throw new ProviderMismatchException(other.toString());
         }
@@ -244,18 +244,20 @@ final class ZeroFsPath implements Path {
         if (otherPath.isEmptyPath()) {
             return this;
         }
-        return pathService.createPath(
-                root, ImmutableList.<Name>builder().addAll(names).addAll(otherPath.names).build());
+        List<Name> allNames = new ArrayList<>();
+        allNames.addAll(names);
+        allNames.addAll(otherPath.names);
+        return pathService.createPath(root, allNames);
     }
 
     @Override
-    public JimfsPath resolve(String other) {
+    public ZeroFsPath resolve(String other) {
         return resolve(pathService.parsePath(other));
     }
 
     @Override
-    public JimfsPath resolveSibling(Path other) {
-        JimfsPath otherPath = checkPath(other);
+    public ZeroFsPath resolveSibling(Path other) {
+        ZeroFsPath otherPath = checkPath(other);
         if (otherPath == null) {
             throw new ProviderMismatchException(other.toString());
         }
@@ -263,7 +265,7 @@ final class ZeroFsPath implements Path {
         if (otherPath.isAbsolute()) {
             return otherPath;
         }
-        JimfsPath parent = getParent();
+        ZeroFsPath parent = getParent();
         if (parent == null) {
             return otherPath;
         }
@@ -271,13 +273,13 @@ final class ZeroFsPath implements Path {
     }
 
     @Override
-    public JimfsPath resolveSibling(String other) {
+    public ZeroFsPath resolveSibling(String other) {
         return resolveSibling(pathService.parsePath(other));
     }
 
     @Override
-    public JimfsPath relativize(Path other) {
-        JimfsPath otherPath = checkPath(other);
+    public ZeroFsPath relativize(Path other) {
+        ZeroFsPath otherPath = checkPath(other);
         if (otherPath == null) {
             throw new ProviderMismatchException(other.toString());
         }
@@ -321,13 +323,13 @@ final class ZeroFsPath implements Path {
     }
 
     @Override
-    public JimfsPath toAbsolutePath() {
-        return isAbsolute() ? this : getJimfsFileSystem().getWorkingDirectory().resolve(this);
+    public ZeroFsPath toAbsolutePath() {
+        return isAbsolute() ? this : getZeroFsFileSystem().getWorkingDirectory().resolve(this);
     }
 
     @Override
-    public JimfsPath toRealPath(LinkOption... options) throws IOException {
-        return getJimfsFileSystem()
+    public ZeroFsPath toRealPath(LinkOption... options) throws IOException {
+        return getZeroFsFileSystem()
                 .getDefaultView()
                 .toRealPath(this, pathService, Options.getLinkOptions(options));
     }
@@ -355,7 +357,7 @@ final class ZeroFsPath implements Path {
 
     @Override
     public URI toUri() {
-        return getJimfsFileSystem().toUri(this);
+        return getZeroFsFileSystem().toUri(this);
     }
 
     @Override
@@ -386,16 +388,16 @@ final class ZeroFsPath implements Path {
     @Override
     public int compareTo(Path other) {
         // documented to throw CCE if other is associated with a different FileSystemProvider
-        JimfsPath otherPath = (JimfsPath) other;
-        Comparator<JimfsPath> comparator =
-                Comparator.comparing((JimfsPath p) -> p.getJimfsFileSystem().getUri())
+        ZeroFsPath otherPath = (ZeroFsPath) other;
+        Comparator<ZeroFsPath> comparator =
+                Comparator.comparing((ZeroFsPath p) -> p.getZeroFsFileSystem().getUri())
                         .thenComparing(pathService);
         return comparator.compare(this, otherPath);
     }
 
     @Override
     public boolean equals(@Nullable Object obj) {
-        return obj instanceof JimfsPath && compareTo((JimfsPath) obj) == 0;
+        return obj instanceof ZeroFsPath && compareTo((ZeroFsPath) obj) == 0;
     }
 
     @Override
@@ -408,9 +410,9 @@ final class ZeroFsPath implements Path {
         return pathService.toString(this);
     }
 
-    private @Nullable JimfsPath checkPath(Path other) {
-        if (checkNotNull(other) instanceof JimfsPath && other.getFileSystem().equals(getFileSystem())) {
-            return (JimfsPath) other;
+    private @Nullable ZeroFsPath checkPath(Path other) {
+        if (checkNotNull(other) instanceof ZeroFsPath && other.getFileSystem().equals(getFileSystem())) {
+            return (ZeroFsPath) other;
         }
         return null;
     }
