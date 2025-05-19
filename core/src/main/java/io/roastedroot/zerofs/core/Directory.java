@@ -316,24 +316,42 @@ final class Directory extends File implements Iterable<DirectoryEntry> {
 
     @Override
     public Iterator<DirectoryEntry> iterator() {
-        throw new RuntimeException("TODO: implement me");
-        //        TODO: commented for now
-        //        return new AbstractIterator<DirectoryEntry>() {
-        //            int index;
-        //            @Nullable DirectoryEntry entry;
-        //
-        //            @Override
-        //            protected DirectoryEntry computeNext() {
-        //                if (entry != null) {
-        //                    entry = entry.next;
-        //                }
-        //
-        //                while (entry == null && index < table.length) {
-        //                    entry = table[index++];
-        //                }
-        //
-        //                return entry != null ? entry : endOfData();
-        //            }
-        //        };
+        return new Iterator<DirectoryEntry>() {
+            int index;
+            boolean end;
+            DirectoryEntry entry;
+
+            protected void computeNext() {
+                if (entry != null) {
+                    entry = entry.next;
+                }
+
+                while (entry == null && index < table.length) {
+                    entry = table[index++];
+                }
+
+                if (entry == null) {
+                    end = true;
+                }
+            }
+
+            @Override
+            public boolean hasNext() {
+                if (!end && entry == null) {
+                    computeNext();
+                }
+                return !end;
+            }
+
+            @Override
+            public DirectoryEntry next() {
+                if (entry != null && !end) {
+                    DirectoryEntry result = entry;
+                    computeNext();
+                    return result;
+                }
+                return entry;
+            }
+        };
     }
 }
