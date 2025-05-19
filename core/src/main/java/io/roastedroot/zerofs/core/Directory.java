@@ -2,6 +2,7 @@ package io.roastedroot.zerofs.core;
 
 import java.nio.file.attribute.FileTime;
 import java.util.Iterator;
+import java.util.NoSuchElementException;
 import java.util.SortedSet;
 import java.util.TreeSet;
 
@@ -317,40 +318,40 @@ final class Directory extends File implements Iterable<DirectoryEntry> {
     @Override
     public Iterator<DirectoryEntry> iterator() {
         return new Iterator<DirectoryEntry>() {
-            int index;
-            boolean end;
-            DirectoryEntry entry;
+            private int index = 0;
+            private DirectoryEntry entry;
 
-            protected void computeNext() {
-                if (entry != null) {
-                    entry = entry.next;
-                }
+            {
+                // Initial advance to the first non-null entry
+                advanceToNextEntry();
+            }
 
+            private void advanceToNextEntry() {
+                // Advance to the next non-null entry or next in chain
                 while (entry == null && index < table.length) {
                     entry = table[index++];
-                }
-
-                if (entry == null) {
-                    end = true;
                 }
             }
 
             @Override
             public boolean hasNext() {
-                if (!end && entry == null) {
-                    computeNext();
-                }
-                return !end;
+                return entry != null;
             }
 
             @Override
             public DirectoryEntry next() {
-                if (entry != null && !end) {
-                    DirectoryEntry result = entry;
-                    computeNext();
-                    return result;
+                if (entry == null) {
+                    throw new NoSuchElementException();
                 }
-                return entry;
+
+                DirectoryEntry current = entry;
+                entry = entry.next;
+
+                if (entry == null) {
+                    advanceToNextEntry();
+                }
+
+                return current;
             }
         };
     }

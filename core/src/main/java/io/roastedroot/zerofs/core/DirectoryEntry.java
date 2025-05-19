@@ -145,8 +145,6 @@ final class DirectoryEntry {
                 + name
                 + ", file="
                 + file
-                + ", next="
-                + next
                 + '}';
     }
 }
