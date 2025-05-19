@@ -3,6 +3,7 @@ package io.roastedroot.zerofs.core;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.file.InvalidPathException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Objects;
 import java.util.stream.Collectors;
@@ -104,7 +105,16 @@ public abstract class PathType {
 
     /** Returns the path splitter for this path type. */
     public final String[] split(String str) {
-        return str.split(splitter);
+        String[] baseSplit = str.split(splitter);
+        ArrayList<String> result = new ArrayList<>();
+        for (int i = 0; i < baseSplit.length; i++) {
+            if (baseSplit[i] == null || baseSplit[i].isEmpty()) {
+                // skip
+            } else {
+                result.add(baseSplit[i]);
+            }
+        }
+        return result.toArray(new String[0]);
     }
 
     /**

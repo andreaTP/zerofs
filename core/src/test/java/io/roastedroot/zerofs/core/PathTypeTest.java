@@ -1,5 +1,6 @@
 package io.roastedroot.zerofs.core;
 
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
@@ -46,54 +47,50 @@ public class PathTypeTest {
         assertEquals("$foo/bar", type.toString(path2.root(), path2.names()));
     }
 
-    //
-    //    @Test
-    //    public void testToUri() {
-    //        URI fileUri = type.toUri(fileSystemUri, "$", ImmutableList.of("foo", "bar"), false);
-    //        assertThat(fileUri.toString()).isEqualTo("jimfs://foo/$/foo/bar");
-    //        assertThat(fileUri.getPath()).isEqualTo("/$/foo/bar");
-    //
-    //        URI directoryUri = type.toUri(fileSystemUri, "$", ImmutableList.of("foo", "bar"),
-    // true);
-    //        assertThat(directoryUri.toString()).isEqualTo("jimfs://foo/$/foo/bar/");
-    //        assertThat(directoryUri.getPath()).isEqualTo("/$/foo/bar/");
-    //
-    //        URI rootUri = type.toUri(fileSystemUri, "$", ImmutableList.<String>of(), true);
-    //        assertThat(rootUri.toString()).isEqualTo("jimfs://foo/$/");
-    //        assertThat(rootUri.getPath()).isEqualTo("/$/");
-    //    }
-    //
-    //    @Test
-    //    public void testToUri_escaping() {
-    //        URI fileUri = type.toUri(fileSystemUri, "$", ImmutableList.of("foo", "bar baz"),
-    // false);
-    //        assertThat(fileUri.toString()).isEqualTo("jimfs://foo/$/foo/bar%20baz");
-    //        assertThat(fileUri.getRawPath()).isEqualTo("/$/foo/bar%20baz");
-    //        assertThat(fileUri.getPath()).isEqualTo("/$/foo/bar baz");
-    //    }
-    //
-    //    @Test
-    //    public void testUriRoundTrips() {
-    //        assertUriRoundTripsCorrectly(type, "$");
-    //        assertUriRoundTripsCorrectly(type, "$foo");
-    //        assertUriRoundTripsCorrectly(type, "$foo/bar/baz");
-    //        assertUriRoundTripsCorrectly(type, "$foo bar");
-    //        assertUriRoundTripsCorrectly(type, "$foo/bar baz");
-    //    }
-    //
-    //    static void assertParseResult(ParseResult result, @Nullable String root, String... names)
-    // {
-    //        assertThat(result.root()).isEqualTo(root);
-    //        assertThat(result.names()).containsExactly((Object[]) names).inOrder();
-    //    }
-    //
-    //    static void assertUriRoundTripsCorrectly(PathType type, String path) {
-    //        ParseResult result = type.parsePath(path);
-    //        URI uri = type.toUri(fileSystemUri, result.root(), result.names(), false);
-    //        ParseResult parsedUri = type.fromUri(uri);
-    //        assertThat(parsedUri.root()).isEqualTo(result.root());
-    //        assertThat(parsedUri.names()).containsExactlyElementsIn(result.names()).inOrder();
-    //    }
+    @Test
+    public void testToUri() {
+        URI fileUri = type.toUri(fileSystemUri, "$", new String[] {"foo", "bar"}, false);
+        assertEquals("zerofs://foo/$/foo/bar", fileUri.toString());
+        assertEquals("/$/foo/bar", fileUri.getPath());
+
+        URI directoryUri = type.toUri(fileSystemUri, "$", new String[] {"foo", "bar"}, true);
+        assertEquals("zerofs://foo/$/foo/bar/", directoryUri.toString());
+        assertEquals("/$/foo/bar/", directoryUri.getPath());
+
+        URI rootUri = type.toUri(fileSystemUri, "$", new String[0], true);
+        assertEquals("zerofs://foo/$/", rootUri.toString());
+        assertEquals("/$/", rootUri.getPath());
+    }
+
+    @Test
+    public void testToUri_escaping() {
+        URI fileUri = type.toUri(fileSystemUri, "$", new String[] {"foo", "bar baz"}, false);
+        assertEquals("zerofs://foo/$/foo/bar%20baz", fileUri.toString());
+        assertEquals("/$/foo/bar%20baz", fileUri.getRawPath());
+        assertEquals("/$/foo/bar baz", fileUri.getPath());
+    }
+
+    @Test
+    public void testUriRoundTrips() {
+        assertUriRoundTripsCorrectly(type, "$");
+        assertUriRoundTripsCorrectly(type, "$foo");
+        assertUriRoundTripsCorrectly(type, "$foo/bar/baz");
+        assertUriRoundTripsCorrectly(type, "$foo bar");
+        assertUriRoundTripsCorrectly(type, "$foo/bar baz");
+    }
+
+    static void assertParseResult(PathType.ParseResult result, String root, String... names) {
+        assertEquals(root, result.root());
+        assertArrayEquals((Object[]) names, result.names());
+    }
+
+    static void assertUriRoundTripsCorrectly(PathType type, String path) {
+        PathType.ParseResult result = type.parsePath(path);
+        URI uri = type.toUri(fileSystemUri, result.root(), result.names(), false);
+        PathType.ParseResult parsedUri = type.fromUri(uri);
+        assertEquals(result.root(), parsedUri.root());
+        assertArrayEquals(result.names(), parsedUri.names());
+    }
 
     /** Arbitrary path type with $ as the root, / as the separator and \ as an alternate separator. */
     private static final class FakePathType extends PathType {

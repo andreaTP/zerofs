@@ -172,7 +172,11 @@ public abstract class File {
         if (attributes == null) {
             return Set.of();
         }
-        return Set.copyOf(attributes.get(view).keySet());
+        Map<String, Object> row = attributes.get(view);
+        if (row == null) {
+            return null;
+        }
+        return Set.copyOf(row.keySet());
     }
 
     /** Returns the attribute keys contained in the attributes map for the file. */
@@ -195,7 +199,11 @@ public abstract class File {
         if (attributes == null) {
             return null;
         }
-        return attributes.get(view).get(attribute);
+        Map<String, Object> existing = attributes.get(view);
+        if (existing == null) {
+            return null;
+        }
+        return existing.get(attribute);
     }
 
     /** Sets the given attribute in the given view to the given value. */
@@ -209,7 +217,7 @@ public abstract class File {
         } else {
             Map<String, Object> val = new HashMap<>();
             val.put(attribute, value);
-            attributes.put(attribute, val);
+            attributes.put(view, val);
         }
     }
 
