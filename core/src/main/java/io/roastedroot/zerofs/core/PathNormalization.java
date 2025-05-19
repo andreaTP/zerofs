@@ -1,5 +1,7 @@
 package io.roastedroot.zerofs.core;
 
+import static io.roastedroot.zerofs.core.Util.toLowerCase;
+
 import java.text.Normalizer;
 import java.util.Locale;
 import java.util.function.Function;
@@ -52,28 +54,20 @@ public enum PathNormalization implements Function<String, String> {
      */
 
     /** Unicode case folding for case insensitive paths. Requires ICU4J on the classpath. */
-    //    TODO: removed for now
-    //    CASE_FOLD_UNICODE(Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE) {
-    //        @Override
-    //        public String apply(String string) {
-    //            try {
-    //                return UCharacter.foldCase(string, true);
-    //            } catch (NoClassDefFoundError e) {
-    //                NoClassDefFoundError error =
-    //                        new NoClassDefFoundError(
-    //                                "PathNormalization.CASE_FOLD_UNICODE requires ICU4J. "
-    //                                        + "Did you forget to include it on your classpath?");
-    //                error.initCause(e);
-    //                throw error;
-    //            }
-    //        }
-    //    },
+    @Deprecated(since = "broken")
+    CASE_FOLD_UNICODE(Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE) {
+        @Override
+        public String apply(String string) {
+            // TODO: is this a viable implementation?
+            return string.toLowerCase(Locale.ROOT);
+        }
+    },
 
     /** ASCII case folding for simple case insensitive paths. */
     CASE_FOLD_ASCII(Pattern.CASE_INSENSITIVE) {
         @Override
         public String apply(String string) {
-            return string.toLowerCase(Locale.ROOT);
+            return toLowerCase(string);
         }
     };
 

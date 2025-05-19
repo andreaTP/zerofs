@@ -224,7 +224,7 @@ public abstract class File {
     /** Deletes the given attribute from the given view. */
     public final synchronized void deleteAttribute(String view, String attribute) {
         if (attributes != null) {
-            attributes.remove(view, attribute);
+            attributes.get(view).remove(attribute);
         }
     }
 
