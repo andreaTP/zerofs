@@ -14,7 +14,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
@@ -30,8 +29,7 @@ final class Options {
     private Options() {}
 
     /** Set containing LinkOption.NOFOLLOW_LINKS. */
-    public static final Set<LinkOption> NOFOLLOW_LINKS =
-            Set.of(LinkOption.NOFOLLOW_LINKS);
+    public static final Set<LinkOption> NOFOLLOW_LINKS = Set.of(LinkOption.NOFOLLOW_LINKS);
 
     /** Empty LinkOption set. */
     public static final Set<LinkOption> FOLLOW_LINKS = Set.of();
@@ -92,8 +90,7 @@ final class Options {
         }
 
         // just return the link options for finding the file, nothing else is needed
-        return (Set<OpenOption>)
-                (Set<?>) (nofollowLinks ? NOFOLLOW_LINKS : FOLLOW_LINKS);
+        return (Set<OpenOption>) (Set<?>) (nofollowLinks ? NOFOLLOW_LINKS : FOLLOW_LINKS);
     }
 
     /** Returns an immutable set of open options for opening a new output stream. */

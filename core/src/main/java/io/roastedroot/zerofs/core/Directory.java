@@ -69,7 +69,8 @@ final class Directory extends File implements Iterable<DirectoryEntry> {
 
     @Override
     void unlinked() {
-        // we don't actually remove the parent link when this directory is unlinked, but the parent's
+        // we don't actually remove the parent link when this directory is unlinked, but the
+        // parent's
         // link count should go down all the same
         parent().decrementLinkCount();
     }
@@ -185,14 +186,16 @@ final class Directory extends File implements Iterable<DirectoryEntry> {
     private void put(DirectoryEntry entry, boolean overwriteExisting) {
         int index = bucketIndex(entry.name(), table.length);
 
-        // find the place the new entry should go, ensuring an entry with the same name doesn't already
+        // find the place the new entry should go, ensuring an entry with the same name doesn't
+        // already
         // exist along the way
         DirectoryEntry prev = null;
         DirectoryEntry curr = table[index];
         while (curr != null) {
             if (curr.name().equals(entry.name())) {
                 if (overwriteExisting) {
-                    // just replace the existing entry; no need to expand, and entryCount doesn't change
+                    // just replace the existing entry; no need to expand, and entryCount doesn't
+                    // change
                     if (prev != null) {
                         prev.next = entry;
                     } else {
@@ -203,7 +206,8 @@ final class Directory extends File implements Iterable<DirectoryEntry> {
                     entry.file().incrementLinkCount();
                     return;
                 } else {
-                    throw new IllegalArgumentException("entry '" + entry.name() + "' already exists");
+                    throw new IllegalArgumentException(
+                            "entry '" + entry.name() + "' already exists");
                 }
             }
 
@@ -213,7 +217,8 @@ final class Directory extends File implements Iterable<DirectoryEntry> {
 
         entryCount++;
         if (expandIfNeeded()) {
-            // if the table was expanded, the index/entry we found is no longer applicable, so just add
+            // if the table was expanded, the index/entry we found is no longer applicable, so just
+            // add
             // the entry normally
             index = bucketIndex(entry.name(), table.length);
             addToBucket(index, table, entry);
@@ -250,7 +255,8 @@ final class Directory extends File implements Iterable<DirectoryEntry> {
                 int index = bucketIndex(entry.name(), newTable.length);
                 addToBucket(index, newTable, entry);
                 DirectoryEntry next = entry.next;
-                // set entry.next to null; it's always the last entry in its bucket after being added
+                // set entry.next to null; it's always the last entry in its bucket after being
+                // added
                 entry.next = null;
                 entry = next;
             }
@@ -311,23 +317,23 @@ final class Directory extends File implements Iterable<DirectoryEntry> {
     @Override
     public Iterator<DirectoryEntry> iterator() {
         throw new RuntimeException("TODO: implement me");
-//        TODO: commented for now
-//        return new AbstractIterator<DirectoryEntry>() {
-//            int index;
-//            @Nullable DirectoryEntry entry;
-//
-//            @Override
-//            protected DirectoryEntry computeNext() {
-//                if (entry != null) {
-//                    entry = entry.next;
-//                }
-//
-//                while (entry == null && index < table.length) {
-//                    entry = table[index++];
-//                }
-//
-//                return entry != null ? entry : endOfData();
-//            }
-//        };
+        //        TODO: commented for now
+        //        return new AbstractIterator<DirectoryEntry>() {
+        //            int index;
+        //            @Nullable DirectoryEntry entry;
+        //
+        //            @Override
+        //            protected DirectoryEntry computeNext() {
+        //                if (entry != null) {
+        //                    entry = entry.next;
+        //                }
+        //
+        //                while (entry == null && index < table.length) {
+        //                    entry = table[index++];
+        //                }
+        //
+        //                return entry != null ? entry : endOfData();
+        //            }
+        //        };
     }
 }

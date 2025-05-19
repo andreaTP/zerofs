@@ -14,84 +14,85 @@ import java.util.Objects;
  */
 final class UserLookupService extends UserPrincipalLookupService {
 
-  private final boolean supportsGroups;
+    private final boolean supportsGroups;
 
-  public UserLookupService(boolean supportsGroups) {
-    this.supportsGroups = supportsGroups;
-  }
-
-  @Override
-  public UserPrincipal lookupPrincipalByName(String name) {
-    return createUserPrincipal(name);
-  }
-
-  @Override
-  public GroupPrincipal lookupPrincipalByGroupName(String group) throws IOException {
-    if (!supportsGroups) {
-      throw new UserPrincipalNotFoundException(group); // required by spec
-    }
-    return createGroupPrincipal(group);
-  }
-
-  /** Creates a {@link UserPrincipal} for the given user name. */
-  static UserPrincipal createUserPrincipal(String name) {
-    return new JimfsUserPrincipal(name);
-  }
-
-  /** Creates a {@link GroupPrincipal} for the given group name. */
-  static GroupPrincipal createGroupPrincipal(String name) {
-    return new JimfsGroupPrincipal(name);
-  }
-
-  /** Base class for {@link UserPrincipal} and {@link GroupPrincipal} implementations. */
-  private abstract static class NamedPrincipal implements UserPrincipal {
-
-    protected final String name;
-
-    private NamedPrincipal(String name) {
-      this.name = Objects.requireNonNull(name);
+    public UserLookupService(boolean supportsGroups) {
+        this.supportsGroups = supportsGroups;
     }
 
     @Override
-    public final String getName() {
-      return name;
+    public UserPrincipal lookupPrincipalByName(String name) {
+        return createUserPrincipal(name);
     }
 
     @Override
-    public final int hashCode() {
-      return name.hashCode();
+    public GroupPrincipal lookupPrincipalByGroupName(String group) throws IOException {
+        if (!supportsGroups) {
+            throw new UserPrincipalNotFoundException(group); // required by spec
+        }
+        return createGroupPrincipal(group);
     }
 
-    @Override
-    public final String toString() {
-      return name;
-    }
-  }
-
-  /** {@link UserPrincipal} implementation. */
-  static final class JimfsUserPrincipal extends NamedPrincipal {
-
-    private JimfsUserPrincipal(String name) {
-      super(name);
+    /** Creates a {@link UserPrincipal} for the given user name. */
+    static UserPrincipal createUserPrincipal(String name) {
+        return new JimfsUserPrincipal(name);
     }
 
-    @Override
-    public boolean equals(Object obj) {
-      return obj instanceof JimfsUserPrincipal
-          && getName().equals(((JimfsUserPrincipal) obj).getName());
-    }
-  }
-
-  /** {@link GroupPrincipal} implementation. */
-  static final class JimfsGroupPrincipal extends NamedPrincipal implements GroupPrincipal {
-
-    private JimfsGroupPrincipal(String name) {
-      super(name);
+    /** Creates a {@link GroupPrincipal} for the given group name. */
+    static GroupPrincipal createGroupPrincipal(String name) {
+        return new JimfsGroupPrincipal(name);
     }
 
-    @Override
-    public boolean equals(Object obj) {
-      return obj instanceof JimfsGroupPrincipal && ((JimfsGroupPrincipal) obj).name.equals(name);
+    /** Base class for {@link UserPrincipal} and {@link GroupPrincipal} implementations. */
+    private abstract static class NamedPrincipal implements UserPrincipal {
+
+        protected final String name;
+
+        private NamedPrincipal(String name) {
+            this.name = Objects.requireNonNull(name);
+        }
+
+        @Override
+        public final String getName() {
+            return name;
+        }
+
+        @Override
+        public final int hashCode() {
+            return name.hashCode();
+        }
+
+        @Override
+        public final String toString() {
+            return name;
+        }
     }
-  }
+
+    /** {@link UserPrincipal} implementation. */
+    static final class JimfsUserPrincipal extends NamedPrincipal {
+
+        private JimfsUserPrincipal(String name) {
+            super(name);
+        }
+
+        @Override
+        public boolean equals(Object obj) {
+            return obj instanceof JimfsUserPrincipal
+                    && getName().equals(((JimfsUserPrincipal) obj).getName());
+        }
+    }
+
+    /** {@link GroupPrincipal} implementation. */
+    static final class JimfsGroupPrincipal extends NamedPrincipal implements GroupPrincipal {
+
+        private JimfsGroupPrincipal(String name) {
+            super(name);
+        }
+
+        @Override
+        public boolean equals(Object obj) {
+            return obj instanceof JimfsGroupPrincipal
+                    && ((JimfsGroupPrincipal) obj).name.equals(name);
+        }
+    }
 }

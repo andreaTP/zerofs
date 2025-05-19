@@ -14,7 +14,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
-import java.util.TreeSet;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -122,7 +121,8 @@ abstract class AbstractWatchService implements WatchService {
         public Event(Kind<T> kind, int count, T context) {
             this.kind = Objects.requireNonNull(kind);
             if (count < 0) {
-                throw new IllegalArgumentException(String.format("count (%s) must be non-negative", count));
+                throw new IllegalArgumentException(
+                        String.format("count (%s) must be non-negative", count));
             }
             this.count = count;
             this.context = context;
@@ -161,11 +161,7 @@ abstract class AbstractWatchService implements WatchService {
 
         @Override
         public String toString() {
-            return "Event{" +
-                    "kind=" + kind +
-                    ", count=" + count +
-                    ", context=" + context +
-                    '}';
+            return "Event{" + "kind=" + kind + ", count=" + count + ", context=" + context + '}';
         }
     }
 
@@ -186,7 +182,8 @@ abstract class AbstractWatchService implements WatchService {
         private final AtomicBoolean valid = new AtomicBoolean(true);
         private final AtomicInteger overflow = new AtomicInteger();
 
-        private final BlockingQueue<WatchEvent<?>> events = new ArrayBlockingQueue<>(MAX_QUEUE_SIZE);
+        private final BlockingQueue<WatchEvent<?>> events =
+                new ArrayBlockingQueue<>(MAX_QUEUE_SIZE);
 
         public Key(
                 AbstractWatchService watcher,
@@ -235,8 +232,10 @@ abstract class AbstractWatchService implements WatchService {
 
         @Override
         public List<WatchEvent<?>> pollEvents() {
-            // note: it's correct to be able to retrieve more events from a key without calling reset()
-            // reset() is ONLY for "returning" the key to the watch service to potentially be retrieved by
+            // note: it's correct to be able to retrieve more events from a key without calling
+            // reset()
+            // reset() is ONLY for "returning" the key to the watch service to potentially be
+            // retrieved by
             // another thread when you're finished with it
             List<WatchEvent<?>> result = new ArrayList<>(events.size());
             events.drainTo(result);

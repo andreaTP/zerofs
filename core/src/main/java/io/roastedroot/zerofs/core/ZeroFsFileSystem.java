@@ -9,58 +9,64 @@ import java.nio.file.Path;
 import java.nio.file.PathMatcher;
 import java.nio.file.WatchService;
 import java.nio.file.attribute.UserPrincipalLookupService;
+import java.util.Objects;
+import java.util.Set;
+import java.util.SortedSet;
+import java.util.TreeSet;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- * {@link FileSystem} implementation for Jimfs. Most behavior for the file system is implemented by
+ * {@link FileSystem} implementation for ZeroFs. Most behavior for the file system is implemented by
  * its {@linkplain #getDefaultView() default file system view}.
  *
  * <h3>Overview of file system design</h3>
  *
- * {@link com.google.common.jimfs.JimfsFileSystem JimfsFileSystem} instances are created by {@link
- * com.google.common.jimfs.JimfsFileSystems JimfsFileSystems} using a user-provided {@link
- * com.google.common.jimfs.Configuration Configuration}. The configuration is used to create the
+ * {@link com.google.common.ZeroFs.ZeroFsFileSystem ZeroFsFileSystem} instances are created by {@link
+ * com.google.common.ZeroFs.ZeroFsFileSystems ZeroFsFileSystems} using a user-provided {@link
+ * com.google.common.ZeroFs.Configuration Configuration}. The configuration is used to create the
  * various classes that implement the file system with the correct settings and to create the file
  * system root directories and working directory. The file system is then used to create the {@code
  * Path} objects that all file system operations use.
  *
  * <p>Once created, the primary entry points to the file system are {@link
- * com.google.common.jimfs.JimfsFileSystemProvider JimfsFileSystemProvider}, which handles calls to
+ * com.google.common.ZeroFs.ZeroFsFileSystemProvider ZeroFsFileSystemProvider}, which handles calls to
  * methods in {@link java.nio.file.Files}, and {@link
- * com.google.common.jimfs.JimfsSecureDirectoryStream JimfsSecureDirectoryStream}, which provides
+ * com.google.common.ZeroFs.ZeroFsSecureDirectoryStream ZeroFsSecureDirectoryStream}, which provides
  * methods that are similar to those of the file system provider but which treat relative paths as
  * relative to the stream's directory rather than the file system's working directory.
  *
  * <p>The implementation of the methods on both of those classes is handled by the {@link
- * com.google.common.jimfs.FileSystemView FileSystemView} class, which acts as a view of the file
+ * com.google.common.ZeroFs.FileSystemView FileSystemView} class, which acts as a view of the file
  * system with a specific working directory. The file system provider uses the file system's default
  * view, while each secure directory stream uses a view specific to that stream.
  *
  * <p>File system views make use of the file system's singleton {@link
- * com.google.common.jimfs.JimfsFileStore JimfsFileStore} which handles file creation, storage and
+ * com.google.common.ZeroFs.ZeroFsFileStore ZeroFsFileStore} which handles file creation, storage and
  * attributes. The file store delegates to several other classes to handle each of these:
  *
  * <ul>
- *   <li>{@link com.google.common.jimfs.FileFactory FileFactory} handles creation of new file
+ *   <li>{@link com.google.common.ZeroFs.FileFactory FileFactory} handles creation of new file
  *       objects.
- *   <li>{@link com.google.common.jimfs.HeapDisk HeapDisk} handles allocation of blocks to {@link
+ *   <li>{@link com.google.common.ZeroFs.HeapDisk HeapDisk} handles allocation of blocks to {@link
  *       RegularFile RegularFile} instances.
- *   <li>{@link com.google.common.jimfs.FileTree FileTree} stores the root of the file hierarchy and
+ *   <li>{@link com.google.common.ZeroFs.FileTree FileTree} stores the root of the file hierarchy and
  *       handles file lookup.
- *   <li>{@link com.google.common.jimfs.AttributeService AttributeService} handles file attributes,
- *       using a set of {@link com.google.common.jimfs.AttributeProvider AttributeProvider}
+ *   <li>{@link com.google.common.ZeroFs.AttributeService AttributeService} handles file attributes,
+ *       using a set of {@link com.google.common.ZeroFs.AttributeProvider AttributeProvider}
  *       implementations to handle each supported file attribute view.
  * </ul>
  *
  * <h3>Paths</h3>
  *
  * The implementation of {@link java.nio.file.Path} for the file system is {@link
- * com.google.common.jimfs.JimfsPath JimfsPath}. Paths are created by a {@link
- * com.google.common.jimfs.PathService PathService} with help from the file system's configured
- * {@link com.google.common.jimfs.PathType PathType}.
+ * com.google.common.ZeroFs.ZeroFsPath ZeroFsPath}. Paths are created by a {@link
+ * com.google.common.ZeroFs.PathService PathService} with help from the file system's configured
+ * {@link com.google.common.ZeroFs.PathType PathType}.
  *
- * <p>Paths are made up of {@link com.google.common.jimfs.Name Name} objects, which also serve as
+ * <p>Paths are made up of {@link com.google.common.ZeroFs.Name Name} objects, which also serve as
  * the file names in directories. A name has two forms:
  *
  * <ul>
@@ -81,35 +87,35 @@ import java.util.concurrent.Executors;
  *
  * <h3>Files</h3>
  *
- * All files in the file system are an instance of {@link com.google.common.jimfs.File File}. A file
+ * All files in the file system are an instance of {@link com.google.common.ZeroFs.File File}. A file
  * object contains both the file's attributes and content.
  *
  * <p>There are three types of files:
  *
  * <ul>
  *   <li>{@link Directory Directory} - contains a table linking file names to {@linkplain
- *       com.google.common.jimfs.DirectoryEntry directory entries}.
+ *       com.google.common.ZeroFs.DirectoryEntry directory entries}.
  *   <li>{@link RegularFile RegularFile} - an in-memory store for raw bytes.
- *   <li>{@link com.google.common.jimfs.SymbolicLink SymbolicLink} - contains a path.
+ *   <li>{@link com.google.common.ZeroFs.SymbolicLink SymbolicLink} - contains a path.
  * </ul>
  *
- * <p>{@link com.google.common.jimfs.JimfsFileChannel JimfsFileChannel}, {@link
- * com.google.common.jimfs.JimfsInputStream JimfsInputStream} and {@link
- * com.google.common.jimfs.JimfsOutputStream JimfsOutputStream} implement the standard
+ * <p>{@link com.google.common.ZeroFs.ZeroFsFileChannel ZeroFsFileChannel}, {@link
+ * com.google.common.ZeroFs.ZeroFsInputStream ZeroFsInputStream} and {@link
+ * com.google.common.ZeroFs.ZeroFsOutputStream ZeroFsOutputStream} implement the standard
  * channel/stream APIs for regular files.
  *
- * <p>{@link com.google.common.jimfs.JimfsSecureDirectoryStream JimfsSecureDirectoryStream} handles
+ * <p>{@link com.google.common.ZeroFs.ZeroFsSecureDirectoryStream ZeroFsSecureDirectoryStream} handles
  * reading the entries of a directory. The secure directory stream additionally contains a {@code
  * FileSystemView} with its directory as the working directory, allowing for operations relative to
  * the actual directory file rather than just the path to the file. This allows the operations to
  * continue to work as expected even if the directory is moved.
  *
  * <p>A directory can be watched for changes using the {@link java.nio.file.WatchService}
- * implementation, {@link com.google.common.jimfs.PollingWatchService PollingWatchService}.
+ * implementation, {@link com.google.common.ZeroFs.PollingWatchService PollingWatchService}.
  *
  * <h3>Regular files</h3>
  *
- * {@link RegularFile RegularFile} makes use of a singleton {@link com.google.common.jimfs.HeapDisk
+ * {@link RegularFile RegularFile} makes use of a singleton {@link com.google.common.ZeroFs.HeapDisk
  * HeapDisk}. A disk is a resizable factory and cache for fixed size blocks of memory. These blocks
  * are allocated to files as needed and returned to the disk when a file is deleted or truncated.
  * When cached free blocks are available, those blocks are allocated to files first. If more blocks
@@ -143,172 +149,178 @@ import java.util.concurrent.Executors;
  */
 final class ZeroFsFileSystem extends FileSystem {
 
-  private final ZeroFsFileSystemProvider provider;
-  private final URI uri;
+    private final ZeroFsFileSystemProvider provider;
+    private final URI uri;
 
-  private final ZeroFsFileStore fileStore;
-  private final PathService pathService;
+    private final ZeroFsFileStore fileStore;
+    private final PathService pathService;
 
-  private final UserPrincipalLookupService userLookupService = new UserLookupService(true);
+    private final UserPrincipalLookupService userLookupService = new UserLookupService(true);
 
-  private final FileSystemView defaultView;
+    private final FileSystemView defaultView;
 
-  private final WatchServiceConfiguration watchServiceConfig;
+    private final WatchServiceConfiguration watchServiceConfig;
 
-  ZeroFsFileSystem(
-      ZeroFsFileSystemProvider provider,
-      URI uri,
-      ZeroFsFileStore fileStore,
-      PathService pathService,
-      FileSystemView defaultView,
-      WatchServiceConfiguration watchServiceConfig) {
-    this.provider = checkNotNull(provider);
-    this.uri = checkNotNull(uri);
-    this.fileStore = checkNotNull(fileStore);
-    this.pathService = checkNotNull(pathService);
-    this.defaultView = checkNotNull(defaultView);
-    this.watchServiceConfig = checkNotNull(watchServiceConfig);
-  }
-
-  @Override
-  public JimfsFileSystemProvider provider() {
-    return provider;
-  }
-
-  /** Returns the URI for this file system. */
-  public URI getUri() {
-    return uri;
-  }
-
-  /** Returns the default view for this file system. */
-  public FileSystemView getDefaultView() {
-    return defaultView;
-  }
-
-  @Override
-  public String getSeparator() {
-    return pathService.getSeparator();
-  }
-
-  @SuppressWarnings("unchecked") // safe cast of immutable set
-  @Override
-  public ImmutableSortedSet<Path> getRootDirectories() {
-    ImmutableSortedSet.Builder<JimfsPath> builder = ImmutableSortedSet.orderedBy(pathService);
-    for (Name name : fileStore.getRootDirectoryNames()) {
-      builder.add(pathService.createRoot(name));
+    ZeroFsFileSystem(
+            ZeroFsFileSystemProvider provider,
+            URI uri,
+            ZeroFsFileStore fileStore,
+            PathService pathService,
+            FileSystemView defaultView,
+            WatchServiceConfiguration watchServiceConfig) {
+        this.provider = Objects.requireNonNull(provider);
+        this.uri = Objects.requireNonNull(uri);
+        this.fileStore = Objects.requireNonNull(fileStore);
+        this.pathService = Objects.requireNonNull(pathService);
+        this.defaultView = Objects.requireNonNull(defaultView);
+        this.watchServiceConfig = Objects.requireNonNull(watchServiceConfig);
     }
-    return (ImmutableSortedSet<Path>) (ImmutableSortedSet<?>) builder.build();
-  }
 
-  /** Returns the working directory path for this file system. */
-  public JimfsPath getWorkingDirectory() {
-    return defaultView.getWorkingDirectoryPath();
-  }
-
-  /** Returns the path service for this file system. */
-  @VisibleForTesting
-  PathService getPathService() {
-    return pathService;
-  }
-
-  /** Returns the file store for this file system. */
-  public JimfsFileStore getFileStore() {
-    return fileStore;
-  }
-
-  @Override
-  public ImmutableSet<FileStore> getFileStores() {
-    fileStore.state().checkOpen();
-    return ImmutableSet.<FileStore>of(fileStore);
-  }
-
-  @Override
-  public ImmutableSet<String> supportedFileAttributeViews() {
-    return fileStore.supportedFileAttributeViews();
-  }
-
-  @Override
-  public JimfsPath getPath(String first, String... more) {
-    fileStore.state().checkOpen();
-    return pathService.parsePath(first, more);
-  }
-
-  /** Gets the URI of the given path in this file system. */
-  public URI toUri(JimfsPath path) {
-    fileStore.state().checkOpen();
-    return pathService.toUri(uri, path.toAbsolutePath());
-  }
-
-  /** Converts the given URI into a path in this file system. */
-  public JimfsPath toPath(URI uri) {
-    fileStore.state().checkOpen();
-    return pathService.fromUri(uri);
-  }
-
-  @Override
-  public PathMatcher getPathMatcher(String syntaxAndPattern) {
-    fileStore.state().checkOpen();
-    return pathService.createPathMatcher(syntaxAndPattern);
-  }
-
-  @Override
-  public UserPrincipalLookupService getUserPrincipalLookupService() {
-    fileStore.state().checkOpen();
-    return userLookupService;
-  }
-
-  @Override
-  public WatchService newWatchService() throws IOException {
-    return watchServiceConfig.newWatchService(defaultView, pathService);
-  }
-
-  private @Nullable ExecutorService defaultThreadPool;
-
-  /**
-   * Returns a default thread pool to use for asynchronous file channels when users do not provide
-   * an executor themselves. (This is required by the spec of newAsynchronousFileChannel in
-   * FileSystemProvider.)
-   */
-  public synchronized ExecutorService getDefaultThreadPool() {
-    if (defaultThreadPool == null) {
-      defaultThreadPool =
-          Executors.newCachedThreadPool(
-              new ThreadFactoryBuilder()
-                  .setDaemon(true)
-                  .setNameFormat("JimfsFileSystem-" + uri.getHost() + "-defaultThreadPool-%s")
-                  .build());
-
-      // ensure thread pool is closed when file system is closed
-      fileStore
-          .state()
-          .register(
-              new Closeable() {
-                @Override
-                public void close() {
-                  defaultThreadPool.shutdown();
-                }
-              });
+    @Override
+    public ZeroFsFileSystemProvider provider() {
+        return provider;
     }
-    return defaultThreadPool;
-  }
 
-  /**
-   * Returns {@code false}; currently, cannot create a read-only file system.
-   *
-   * @return {@code false}, always
-   */
-  @Override
-  public boolean isReadOnly() {
-    return false;
-  }
+    /** Returns the URI for this file system. */
+    public URI getUri() {
+        return uri;
+    }
 
-  @Override
-  public boolean isOpen() {
-    return fileStore.state().isOpen();
-  }
+    /** Returns the default view for this file system. */
+    public FileSystemView getDefaultView() {
+        return defaultView;
+    }
 
-  @Override
-  public void close() throws IOException {
-    fileStore.state().close();
-  }
+    @Override
+    public String getSeparator() {
+        return pathService.getSeparator();
+    }
+
+    @SuppressWarnings("unchecked") // safe cast of immutable set
+    @Override
+    public SortedSet<Path> getRootDirectories() {
+        SortedSet<ZeroFsPath> builder = new TreeSet<>(pathService);
+        for (Name name : fileStore.getRootDirectoryNames()) {
+            builder.add(pathService.createRoot(name));
+        }
+        return (SortedSet<Path>) (SortedSet<?>) Set.copyOf(builder);
+    }
+
+    /** Returns the working directory path for this file system. */
+    public ZeroFsPath getWorkingDirectory() {
+        return defaultView.getWorkingDirectoryPath();
+    }
+
+    /** Returns the path service for this file system. */
+    PathService getPathService() {
+        return pathService;
+    }
+
+    /** Returns the file store for this file system. */
+    public ZeroFsFileStore getFileStore() {
+        return fileStore;
+    }
+
+    @Override
+    public Set<FileStore> getFileStores() {
+        fileStore.state().checkOpen();
+        return Set.<FileStore>of(fileStore);
+    }
+
+    @Override
+    public Set<String> supportedFileAttributeViews() {
+        return fileStore.supportedFileAttributeViews();
+    }
+
+    @Override
+    public ZeroFsPath getPath(String first, String... more) {
+        fileStore.state().checkOpen();
+        return pathService.parsePath(first, more);
+    }
+
+    /** Gets the URI of the given path in this file system. */
+    public URI toUri(ZeroFsPath path) {
+        fileStore.state().checkOpen();
+        return pathService.toUri(uri, path.toAbsolutePath());
+    }
+
+    /** Converts the given URI into a path in this file system. */
+    public ZeroFsPath toPath(URI uri) {
+        fileStore.state().checkOpen();
+        return pathService.fromUri(uri);
+    }
+
+    @Override
+    public PathMatcher getPathMatcher(String syntaxAndPattern) {
+        fileStore.state().checkOpen();
+        return pathService.createPathMatcher(syntaxAndPattern);
+    }
+
+    @Override
+    public UserPrincipalLookupService getUserPrincipalLookupService() {
+        fileStore.state().checkOpen();
+        return userLookupService;
+    }
+
+    @Override
+    public WatchService newWatchService() throws IOException {
+        return watchServiceConfig.newWatchService(defaultView, pathService);
+    }
+
+    private ExecutorService defaultThreadPool;
+
+    /**
+     * Returns a default thread pool to use for asynchronous file channels when users do not provide
+     * an executor themselves. (This is required by the spec of newAsynchronousFileChannel in
+     * FileSystemProvider.)
+     */
+    public synchronized ExecutorService getDefaultThreadPool() {
+        if (defaultThreadPool == null) {
+            String host = uri.getHost();
+            String nameFormat = "ZeroFsFileSystem-" + host + "-defaultThreadPool-%d";
+            AtomicInteger count = new AtomicInteger(0);
+
+            ThreadFactory threadFactory =
+                    r -> {
+                        Thread thread = new Thread(r);
+                        thread.setDaemon(true);
+                        thread.setName(String.format(nameFormat, count.getAndIncrement()));
+                        return thread;
+                    };
+
+            defaultThreadPool = Executors.newCachedThreadPool(threadFactory);
+
+            // ensure thread pool is closed when file system is closed
+            fileStore
+                    .state()
+                    .register(
+                            new Closeable() {
+                                @Override
+                                public void close() {
+                                    defaultThreadPool.shutdown();
+                                }
+                            });
+        }
+        return defaultThreadPool;
+    }
+
+    /**
+     * Returns {@code false}; currently, cannot create a read-only file system.
+     *
+     * @return {@code false}, always
+     */
+    @Override
+    public boolean isReadOnly() {
+        return false;
+    }
+
+    @Override
+    public boolean isOpen() {
+        return fileStore.state().isOpen();
+    }
+
+    @Override
+    public void close() throws IOException {
+        fileStore.state().close();
+    }
 }

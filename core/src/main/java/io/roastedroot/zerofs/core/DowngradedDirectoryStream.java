@@ -15,19 +15,19 @@ import java.util.Objects;
  */
 final class DowngradedDirectoryStream implements DirectoryStream<Path> {
 
-  private final SecureDirectoryStream<Path> secureDirectoryStream;
+    private final SecureDirectoryStream<Path> secureDirectoryStream;
 
-  DowngradedDirectoryStream(SecureDirectoryStream<Path> secureDirectoryStream) {
-    this.secureDirectoryStream = Objects.requireNonNull(secureDirectoryStream);
-  }
+    DowngradedDirectoryStream(SecureDirectoryStream<Path> secureDirectoryStream) {
+        this.secureDirectoryStream = Objects.requireNonNull(secureDirectoryStream);
+    }
 
-  @Override
-  public Iterator<Path> iterator() {
-    return secureDirectoryStream.iterator();
-  }
+    @Override
+    public Iterator<Path> iterator() {
+        return secureDirectoryStream.iterator();
+    }
 
-  @Override
-  public void close() throws IOException {
-    secureDirectoryStream.close();
-  }
+    @Override
+    public void close() throws IOException {
+        secureDirectoryStream.close();
+    }
 }

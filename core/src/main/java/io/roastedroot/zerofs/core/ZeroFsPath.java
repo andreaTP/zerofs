@@ -89,7 +89,7 @@ final class ZeroFsPath implements Path {
     }
 
     @Override
-    public @Nullable ZeroFsPath getRoot() {
+    public ZeroFsPath getRoot() {
         if (root == null) {
             return null;
         }
@@ -97,12 +97,12 @@ final class ZeroFsPath implements Path {
     }
 
     @Override
-    public @Nullable ZeroFsPath getFileName() {
+    public ZeroFsPath getFileName() {
         return names.isEmpty() ? null : getName(names.size() - 1);
     }
 
     @Override
-    public @Nullable ZeroFsPath getParent() {
+    public ZeroFsPath getParent() {
         if (names.isEmpty() || (names.size() == 1 && root == null)) {
             return null;
         }
@@ -117,22 +117,23 @@ final class ZeroFsPath implements Path {
 
     @Override
     public ZeroFsPath getName(int index) {
-        checkArgument(
-                index >= 0 && index < names.size(),
-                "index (%s) must be >= 0 and < name count (%s)",
-                index,
-                names.size());
+        if (!(index >= 0 && index < names.size())) {
+            throw new IllegalArgumentException(
+                    String.format(
+                            "index (%s) must be >= 0 and < name count (%s)", index, names.size()));
+        }
         return pathService.createFileName(names.get(index));
     }
 
     @Override
     public ZeroFsPath subpath(int beginIndex, int endIndex) {
-        checkArgument(
-                beginIndex >= 0 && endIndex <= names.size() && endIndex > beginIndex,
-                "beginIndex (%s) must be >= 0; endIndex (%s) must be <= name count (%s) and > beginIndex",
-                beginIndex,
-                endIndex,
-                names.size());
+        if (!(beginIndex >= 0 && endIndex <= names.size() && endIndex > beginIndex)) {
+            throw new IllegalArgumentException(
+                    String.format(
+                            "beginIndex (%s) must be >= 0; endIndex (%s) must be <= name count (%s)"
+                                    + " and > beginIndex",
+                            beginIndex, endIndex, names.size()));
+        }
         return pathService.createRelativePath(names.subList(beginIndex, endIndex));
     }
 
@@ -165,7 +166,13 @@ final class ZeroFsPath implements Path {
         if (otherPath.isAbsolute()) {
             return compareTo(otherPath) == 0;
         }
-        return startsWith(names.reverse(), otherPath.names.reverse());
+        List<Name> names1 = new ArrayList<>();
+        names1.addAll(names);
+        Collections.reverse(names1);
+        List<Name> names2 = new ArrayList<>();
+        names2.addAll(otherPath.names);
+        Collections.reverse(names2);
+        return startsWith(names1, names2);
     }
 
     @Override
@@ -186,15 +193,21 @@ final class ZeroFsPath implements Path {
                 if (lastName != null && !lastName.equals(Name.PARENT)) {
                     newNames.removeLast();
                 } else if (!isAbsolute()) {
-                    // if there's a root and we have an extra ".." that would go up above the root, ignore it
+                    // if there's a root and we have an extra ".." that would go up above the root,
+                    // ignore it
                     newNames.add(name);
                 }
             } else if (!name.equals(Name.SELF)) {
                 newNames.add(name);
             }
         }
+        // TODO: verify!
+        List<Name> comparable1 = new ArrayList<>();
+        comparable1.addAll(newNames);
+        List<Name> comparable2 = new ArrayList<>();
+        comparable2.addAll(names);
 
-        return Iterables.elementsEqual(newNames, names) ? this : pathService.createPath(root, newNames);
+        return comparable1.equals(comparable2) ? this : pathService.createPath(root, newNames);
     }
 
     /**
@@ -206,7 +219,8 @@ final class ZeroFsPath implements Path {
             return true;
         }
 
-        boolean foundNonParentName = isAbsolute(); // if there's a root, the path doesn't start with ..
+        boolean foundNonParentName =
+                isAbsolute(); // if there's a root, the path doesn't start with ..
         boolean normal = true;
         for (Name name : names) {
             if (name.equals(Name.PARENT)) {
@@ -284,8 +298,10 @@ final class ZeroFsPath implements Path {
             throw new ProviderMismatchException(other.toString());
         }
 
-        checkArgument(
-                Objects.equals(root, otherPath.root), "Paths have different roots: %s, %s", this, other);
+        if (!Objects.equals(root, otherPath.root)) {
+            throw new IllegalArgumentException(
+                    String.format("Paths have different roots: %s, %s", this, other));
+        }
 
         if (equals(other)) {
             return pathService.emptyPath();
@@ -295,7 +311,7 @@ final class ZeroFsPath implements Path {
             return otherPath;
         }
 
-        ImmutableList<Name> otherNames = otherPath.names;
+        List<Name> otherNames = otherPath.names;
         int sharedSubsequenceLength = 0;
         for (int i = 0; i < Math.min(getNameCount(), otherNames.size()); i++) {
             if (names.get(i).equals(otherNames.get(i))) {
@@ -307,9 +323,9 @@ final class ZeroFsPath implements Path {
 
         int extraNamesInThis = Math.max(0, getNameCount() - sharedSubsequenceLength);
 
-        ImmutableList<Name> extraNamesInOther =
+        List<Name> extraNamesInOther =
                 (otherNames.size() <= sharedSubsequenceLength)
-                        ? ImmutableList.<Name>of()
+                        ? List.<Name>of()
                         : otherNames.subList(sharedSubsequenceLength, otherNames.size());
 
         List<Name> parts = new ArrayList<>(extraNamesInThis + extraNamesInOther.size());
@@ -338,14 +354,15 @@ final class ZeroFsPath implements Path {
     public WatchKey register(
             WatchService watcher, WatchEvent.Kind<?>[] events, WatchEvent.Modifier... modifiers)
             throws IOException {
-        checkNotNull(modifiers);
+        Objects.requireNonNull(modifiers);
         return register(watcher, events);
     }
 
     @Override
-    public WatchKey register(WatchService watcher, WatchEvent.Kind<?>... events) throws IOException {
-        checkNotNull(watcher);
-        checkNotNull(events);
+    public WatchKey register(WatchService watcher, WatchEvent.Kind<?>... events)
+            throws IOException {
+        Objects.requireNonNull(watcher);
+        Objects.requireNonNull(events);
         if (!(watcher instanceof AbstractWatchService)) {
             throw new IllegalArgumentException(
                     "watcher (" + watcher + ") is not associated with this file system");
@@ -396,7 +413,7 @@ final class ZeroFsPath implements Path {
     }
 
     @Override
-    public boolean equals(@Nullable Object obj) {
+    public boolean equals(Object obj) {
         return obj instanceof ZeroFsPath && compareTo((ZeroFsPath) obj) == 0;
     }
 
@@ -410,8 +427,9 @@ final class ZeroFsPath implements Path {
         return pathService.toString(this);
     }
 
-    private @Nullable ZeroFsPath checkPath(Path other) {
-        if (checkNotNull(other) instanceof ZeroFsPath && other.getFileSystem().equals(getFileSystem())) {
+    private ZeroFsPath checkPath(Path other) {
+        if (Objects.requireNonNull(other) instanceof ZeroFsPath
+                && other.getFileSystem().equals(getFileSystem())) {
             return (ZeroFsPath) other;
         }
         return null;

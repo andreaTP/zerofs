@@ -7,7 +7,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
-
 /**
  * Abstract provider for handling a specific file attribute view.
  *
@@ -81,7 +80,8 @@ public abstract class AttributeProvider {
      * @throws UnsupportedOperationException if the given attribute is one supported by this provider
      *     and is allowed to be set by the user, but not on file creation and {@code create} is true
      */
-    public abstract void set(File file, String view, String attribute, Object value, boolean create);
+    public abstract void set(
+            File file, String view, String attribute, Object value, boolean create);
 
     // optional
 
@@ -107,7 +107,8 @@ public abstract class AttributeProvider {
 
     /** Throws a runtime exception indicating that the given attribute cannot be set. */
     protected static RuntimeException unsettable(String view, String attribute, boolean create) {
-        // This matches the behavior of the real file system implementations: if the attempt to set the
+        // This matches the behavior of the real file system implementations: if the attempt to set
+        // the
         // attribute is being made during file creation, throw UOE even though the attribute is one
         // that cannot be set under any circumstances
         checkNotCreate(view, attribute, create);
@@ -145,7 +146,9 @@ public abstract class AttributeProvider {
     protected static IllegalArgumentException invalidType(
             String view, String attribute, Object value, Class<?>... expectedTypes) {
         Object expected =
-                expectedTypes.length == 1 ? expectedTypes[0] : "one of " + Arrays.toString(expectedTypes);
+                expectedTypes.length == 1
+                        ? expectedTypes[0]
+                        : "one of " + Arrays.toString(expectedTypes);
         throw new IllegalArgumentException(
                 "invalid type "
                         + value.getClass()

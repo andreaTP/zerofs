@@ -182,8 +182,8 @@ public abstract class File {
         }
 
         Set<String> builder = new TreeSet<>();
-        for (Map.Entry<String, Map<String, Object>> row: attributes.entrySet()) {
-            for (Map.Entry<String, Object> col: row.getValue().entrySet()) {
+        for (Map.Entry<String, Map<String, Object>> row : attributes.entrySet()) {
+            for (Map.Entry<String, Object> col : row.getValue().entrySet()) {
                 builder.add(row.getKey() + ':' + col.getKey());
             }
         }
@@ -249,8 +249,6 @@ public abstract class File {
 
     @Override
     public String toString() {
-        return "File{" +
-                "id=" + id +
-                '}';
+        return "File{" + "id=" + id + '}';
     }
 }

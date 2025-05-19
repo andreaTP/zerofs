@@ -1,7 +1,6 @@
 package io.roastedroot.zerofs.core;
 
 import java.io.IOException;
-import java.math.RoundingMode;
 
 /**
  * A resizable pseudo-disk acting as a shared space for storing file data. A disk allocates fixed
@@ -37,7 +36,9 @@ final class HeapDisk {
         this.blockSize = config.blockSize;
         this.maxBlockCount = toBlockCount(config.maxSize, blockSize);
         this.maxCachedBlockCount =
-                config.maxCacheSize == -1 ? maxBlockCount : toBlockCount(config.maxCacheSize, blockSize);
+                config.maxCacheSize == -1
+                        ? maxBlockCount
+                        : toBlockCount(config.maxCacheSize, blockSize);
         this.blockCache = createBlockCache(maxCachedBlockCount);
     }
 
@@ -46,20 +47,50 @@ final class HeapDisk {
      * maxCachedBlockCount}.
      */
     public HeapDisk(int blockSize, int maxBlockCount, int maxCachedBlockCount) {
-        checkArgument(blockSize > 0, "blockSize (%s) must be positive", blockSize);
-        checkArgument(maxBlockCount > 0, "maxBlockCount (%s) must be positive", maxBlockCount);
-        checkArgument(
-                maxCachedBlockCount >= 0, "maxCachedBlockCount (%s) must be non-negative",
-                maxCachedBlockCount);
+        if (blockSize <= 0) {
+            throw new IllegalArgumentException(
+                    String.format("blockSize (%s) must be positive", blockSize));
+        }
+        if (maxBlockCount <= 0) {
+            throw new IllegalArgumentException(
+                    String.format("maxBlockCount (%s) must be positive", maxBlockCount));
+        }
+        if (maxCachedBlockCount < 0) {
+            throw new IllegalArgumentException(
+                    String.format(
+                            "maxCachedBlockCount (%s) must be non-negative", maxCachedBlockCount));
+        }
         this.blockSize = blockSize;
         this.maxBlockCount = maxBlockCount;
         this.maxCachedBlockCount = maxCachedBlockCount;
         this.blockCache = createBlockCache(maxCachedBlockCount);
     }
 
+    // copy pasted from com.google.common.math.LongMath, kept only the FLOOR case
+    public static long divide(long p, long q) {
+        long div = p / q; // throws if q == 0
+        long rem = p - q * div; // equals p % q
+
+        if (rem == 0) {
+            return div;
+        }
+
+        /*
+         * Normal Java division rounds towards 0, consistently with RoundingMode.DOWN. We just have to
+         * deal with the cases where rounding towards 0 is wrong, which typically depends on the sign of
+         * p / q.
+         *
+         * signum is 1 if p and q are both nonnegative or both negative, and -1 otherwise.
+         */
+        int signum = 1 | (int) ((p ^ q) >> (Long.SIZE - 1));
+        boolean increment = signum < 0;
+
+        return increment ? div + signum : div;
+    }
+
     /** Returns the nearest multiple of {@code blockSize} that is <= {@code size}. */
     private static int toBlockCount(long size, int blockSize) {
-        return (int) LongMath.divide(size, blockSize, RoundingMode.FLOOR);
+        return (int) divide(size, blockSize);
     }
 
     private RegularFile createBlockCache(int maxCachedBlockCount) {

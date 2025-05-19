@@ -1,10 +1,8 @@
 package io.roastedroot.zerofs.core;
 
 import java.nio.file.InvalidPathException;
-import java.util.Iterator;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import org.jspecify.annotations.Nullable;
 
 /**
  * Windows-style path type.
@@ -30,7 +28,8 @@ final class WindowsPathType extends PathType {
     //   root directory and then determine the working directory from there. The file system would
     //   still have one working directory; for the root that working directory is under, it is the
     //   working directory. For every other root, the root itself is the working directory.
-    private static final Pattern WORKING_DIR_WITH_DRIVE = Pattern.compile("^[a-zA-Z]:([^\\\\].*)?$");
+    private static final Pattern WORKING_DIR_WITH_DRIVE =
+            Pattern.compile("^[a-zA-Z]:([^\\\\].*)?$");
 
     /** Pattern for matching trailing spaces in file names. */
     private static final Pattern TRAILING_SPACES = Pattern.compile("[ ]+(\\\\|$)");
@@ -74,7 +73,8 @@ final class WindowsPathType extends PathType {
 
         Matcher trailingSpaceMatcher = TRAILING_SPACES.matcher(path);
         if (trailingSpaceMatcher.find()) {
-            throw new InvalidPathException(original, "Trailing char < >", trailingSpaceMatcher.start());
+            throw new InvalidPathException(
+                    original, "Trailing char < >", trailingSpaceMatcher.start());
         }
 
         if (root != null) {
@@ -85,11 +85,12 @@ final class WindowsPathType extends PathType {
             }
         }
 
-        return new ParseResult(root, splitter().split(path));
+        return new ParseResult(root, split(path));
     }
 
     /** Pattern for matching UNC \\host\share root syntax. */
-    private static final Pattern UNC_ROOT = Pattern.compile("^(\\\\\\\\)([^\\\\]+)?(\\\\[^\\\\]+)?");
+    private static final Pattern UNC_ROOT =
+            Pattern.compile("^(\\\\\\\\)([^\\\\]+)?(\\\\[^\\\\]+)?");
 
     /**
      * Parse the root of a UNC-style path, throwing an exception if the path does not start with a
@@ -143,17 +144,25 @@ final class WindowsPathType extends PathType {
     }
 
     @Override
-    public String toString(String root, Iterable<String> names) {
+    public String toString(String root, String[] names) {
         StringBuilder builder = new StringBuilder();
         if (root != null) {
             builder.append(root);
         }
-        joiner().appendTo(builder, names);
+        // TODO: fixme
+        // joiner().appendTo(builder, names);
+        for (int i = 0; i < names.length; i++) {
+            if (i == 0) {
+                builder.append(names[i]);
+            } else {
+                builder.append('/').append(names[i]);
+            }
+        }
         return builder.toString();
     }
 
     @Override
-    public String toUriPath(String root, Iterable<String> names, boolean directory) {
+    public String toUriPath(String root, String[] names, boolean directory) {
         if (root.startsWith("\\\\")) {
             root = root.replace('\\', '/');
         } else {
@@ -163,13 +172,21 @@ final class WindowsPathType extends PathType {
         StringBuilder builder = new StringBuilder();
         builder.append(root);
 
-        Iterator<String> iter = names.iterator();
-        if (iter.hasNext()) {
-            builder.append(iter.next());
-            while (iter.hasNext()) {
-                builder.append('/').append(iter.next());
+        for (int i = 0; i < names.length; i++) {
+            if (i == 0) {
+                builder.append(names[i]);
+            } else {
+                builder.append('/').append(names[i]);
             }
         }
+        // TODO: verify
+        //        Iterator<String> iter = names.iterator();
+        //        if (iter.hasNext()) {
+        //            builder.append(iter.next());
+        //            while (iter.hasNext()) {
+        //                builder.append('/').append(iter.next());
+        //            }
+        //        }
 
         if (directory && builder.charAt(builder.length() - 1) != '/') {
             builder.append('/');

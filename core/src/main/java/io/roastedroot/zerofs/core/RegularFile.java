@@ -1,5 +1,8 @@
 package io.roastedroot.zerofs.core;
 
+import static io.roastedroot.zerofs.core.Util.clear;
+import static io.roastedroot.zerofs.core.Util.nextPowerOf2;
+
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
@@ -7,6 +10,7 @@ import java.nio.channels.ReadableByteChannel;
 import java.nio.channels.WritableByteChannel;
 import java.nio.file.attribute.FileTime;
 import java.util.Arrays;
+import java.util.Objects;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
@@ -25,6 +29,7 @@ final class RegularFile extends File {
 
     /** Block list for the file. */
     private byte[][] blocks;
+
     /** Block count for the the file, which also acts as the head of the block list. */
     private int blockCount;
 
@@ -43,11 +48,13 @@ final class RegularFile extends File {
             int blockCount,
             long size) {
         super(id, creationTime);
-        this.disk = checkNotNull(disk);
-        this.blocks = checkNotNull(blocks);
+        this.disk = Objects.requireNonNull(disk);
+        this.blocks = Objects.requireNonNull(blocks);
         this.blockCount = blockCount;
 
-        checkArgument(size >= 0);
+        if (size < 0) {
+            throw new IllegalArgumentException();
+        }
         this.size = size;
     }
 
@@ -106,7 +113,6 @@ final class RegularFile extends File {
     }
 
     /** Gets the block at the given index in this file. */
-    @VisibleForTesting
     byte[] getBlock(int index) {
         return blocks[index];
     }
@@ -201,7 +207,6 @@ final class RegularFile extends File {
      * nothing. Returns {@code true} if this file was modified by the call (its size changed) and
      * {@code false} otherwise.
      */
-    @CanIgnoreReturnValue
     public boolean truncate(long size) {
         if (size >= this.size) {
             return false;
@@ -259,7 +264,6 @@ final class RegularFile extends File {
      *
      * @throws IOException if the file needs more blocks but the disk is full
      */
-    @CanIgnoreReturnValue
     public int write(long pos, byte b) throws IOException {
         prepareForWrite(pos, 1);
 
@@ -282,7 +286,6 @@ final class RegularFile extends File {
      *
      * @throws IOException if the file needs more blocks but the disk is full
      */
-    @CanIgnoreReturnValue
     public int write(long pos, byte[] b, int off, int len) throws IOException {
         prepareForWrite(pos, len);
 
@@ -324,7 +327,6 @@ final class RegularFile extends File {
      *
      * @throws IOException if the file needs more blocks but the disk is full
      */
-    @CanIgnoreReturnValue
     public int write(long pos, ByteBuffer buf) throws IOException {
         int len = buf.remaining();
 
@@ -362,7 +364,6 @@ final class RegularFile extends File {
      *
      * @throws IOException if the file needs more blocks but the disk is full
      */
-    @CanIgnoreReturnValue
     public long write(long pos, Iterable<ByteBuffer> bufs) throws IOException {
         long start = pos;
         for (ByteBuffer buf : bufs) {
@@ -379,9 +380,11 @@ final class RegularFile extends File {
      * @throws IOException if the file needs more blocks but the disk is full or if reading from src
      *     throws an exception
      */
-    public long transferFrom(ReadableByteChannel src, long startPos, long count) throws IOException {
+    public long transferFrom(ReadableByteChannel src, long startPos, long count)
+            throws IOException {
         if (count == 0
-                // Unlike the write() methods, attempting to transfer to a position that is greater than the
+                // Unlike the write() methods, attempting to transfer to a position that is greater
+                // than the
                 // current file size simply does nothing.
                 || startPos > size) {
             return 0;
@@ -400,20 +403,32 @@ final class RegularFile extends File {
             ByteBuffer buf = ByteBuffer.wrap(block, off, length(off, remaining));
             while (buf.hasRemaining()) {
                 int read = src.read(buf);
-                // Note: we stop if we read 0 bytes from the src; even though the src is not at EOF, the
-                // spec of transferFrom is to stop immediately when reading from a non-blocking channel that
-                // has no bytes available rather than continuing until it reaches EOF. This makes sense
-                // because we'd otherwise just spin attempting to read bytes from the src repeatedly.
+                // Note: we stop if we read 0 bytes from the src; even though the src is not at EOF,
+                // the
+                // spec of transferFrom is to stop immediately when reading from a non-blocking
+                // channel that
+                // has no bytes available rather than continuing until it reaches EOF. This makes
+                // sense
+                // because we'd otherwise just spin attempting to read bytes from the src
+                // repeatedly.
                 if (read < 1) {
                     if (currentPos >= size && buf.position() == 0) {
-                        // The current position is at or beyond the end of file (prior to transfer start) and
-                        // the current buffer position is 0. This means that a new block must have just been
-                        // allocated to hold any potential transferred bytes, but no bytes were transferred to
-                        // it because the src had no remaining bytes. So we need to de-allocate that block.
-                        // It's possible that it would be preferable to always transfer to a temporary block
-                        // first and then copy that block to a newly allocated block when it's full or src
-                        // doesn't have any further bytes. Then if we hadn't read anything into the temporary
-                        // block, we could simply discard it. But I think this scenario is likely rare enough
+                        // The current position is at or beyond the end of file (prior to transfer
+                        // start) and
+                        // the current buffer position is 0. This means that a new block must have
+                        // just been
+                        // allocated to hold any potential transferred bytes, but no bytes were
+                        // transferred to
+                        // it because the src had no remaining bytes. So we need to de-allocate that
+                        // block.
+                        // It's possible that it would be preferable to always transfer to a
+                        // temporary block
+                        // first and then copy that block to a newly allocated block when it's full
+                        // or src
+                        // doesn't have any further bytes. Then if we hadn't read anything into the
+                        // temporary
+                        // block, we could simply discard it. But I think this scenario is likely
+                        // rare enough
                         // that it's fine to temporarily allocate a block that _might_ not get used.
                         disk.free(this, 1);
                     }
@@ -447,7 +462,7 @@ final class RegularFile extends File {
 
         byte[] block = blocks[blockIndex(pos)];
         int off = offsetInBlock(pos);
-        return UnsignedBytes.toInt(block[off]);
+        return (block[off] & 0xFF);
     }
 
     /**
@@ -555,7 +570,7 @@ final class RegularFile extends File {
             while (buf.hasRemaining()) {
                 remaining -= dest.write(buf);
             }
-            Java8Compatibility.clear(buf);
+            buf.clear();
 
             while (remaining > 0) {
                 int index = ++blockIndex;
@@ -565,7 +580,7 @@ final class RegularFile extends File {
                 while (buf.hasRemaining()) {
                     remaining -= dest.write(buf);
                 }
-                Java8Compatibility.clear(buf);
+                buf.clear();
             }
         }
 

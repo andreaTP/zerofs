@@ -4,7 +4,6 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.file.InvalidPathException;
 import java.util.Arrays;
-import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
@@ -126,7 +125,7 @@ public abstract class PathType {
 
     /** Returns an empty path. */
     protected final ParseResult emptyPath() {
-        return new ParseResult(null, new String[] { "" });
+        return new ParseResult(null, new String[] {""});
     }
 
     /**
@@ -162,11 +161,11 @@ public abstract class PathType {
     /**
      * Creates a URI for the path with the given root and names in the file system with the given URI.
      */
-    public final URI toUri(
-            URI fileSystemUri, String root, String[] names, boolean directory) {
+    public final URI toUri(URI fileSystemUri, String root, String[] names, boolean directory) {
         String path = toUriPath(root, names, directory);
         try {
-            // it should not suck this much to create a new URI that's the same except with a path set =(
+            // it should not suck this much to create a new URI that's the same except with a path
+            // set =(
             // need to do it this way for automatic path escaping
             return new URI(
                     fileSystemUri.getScheme(),

@@ -25,7 +25,7 @@ final class UnixPathType extends PathType {
         checkValid(path);
 
         String root = path.startsWith("/") ? "/" : null;
-        return new ParseResult(root, path.split());
+        return new ParseResult(root, split(path));
     }
 
     private static void checkValid(String path) {
@@ -61,7 +61,8 @@ final class UnixPathType extends PathType {
     @Override
     public ParseResult parseUriPath(String uriPath) {
         if (!uriPath.startsWith("/")) {
-            throw new IllegalArgumentException(String.format("uriPath (%s) must start with /", uriPath));
+            throw new IllegalArgumentException(
+                    String.format("uriPath (%s) must start with /", uriPath));
         }
         return parsePath(uriPath);
     }

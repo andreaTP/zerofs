@@ -1,21 +1,5 @@
 package io.roastedroot.zerofs.core;
 
-import java.nio.channels.FileChannel;
-import java.nio.file.FileSystem;
-import java.nio.file.InvalidPathException;
-import java.nio.file.SecureDirectoryStream;
-import java.nio.file.WatchService;
-import java.nio.file.attribute.BasicFileAttributeView;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
-import java.util.regex.Pattern;
-
 import static io.roastedroot.zerofs.core.Feature.FILE_CHANNEL;
 import static io.roastedroot.zerofs.core.Feature.LINKS;
 import static io.roastedroot.zerofs.core.Feature.SECURE_DIRECTORY_STREAM;
@@ -23,6 +7,21 @@ import static io.roastedroot.zerofs.core.Feature.SYMBOLIC_LINKS;
 import static io.roastedroot.zerofs.core.PathNormalization.CASE_FOLD_ASCII;
 import static io.roastedroot.zerofs.core.PathNormalization.NFC;
 import static io.roastedroot.zerofs.core.PathNormalization.NFD;
+
+import java.nio.channels.FileChannel;
+import java.nio.file.FileSystem;
+import java.nio.file.InvalidPathException;
+import java.nio.file.SecureDirectoryStream;
+import java.nio.file.WatchService;
+import java.nio.file.attribute.BasicFileAttributeView;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+import java.util.regex.Pattern;
 
 /**
  * Immutable configuration for an in-memory file system. A {@code Configuration} is passed to a
@@ -70,7 +69,8 @@ public final class Configuration {
                         .setRoots("/")
                         .setWorkingDirectory("/work")
                         .setAttributeViews("basic")
-                        .setSupportedFeatures(LINKS, SYMBOLIC_LINKS, SECURE_DIRECTORY_STREAM, FILE_CHANNEL)
+                        .setSupportedFeatures(
+                                LINKS, SYMBOLIC_LINKS, SECURE_DIRECTORY_STREAM, FILE_CHANNEL)
                         .build();
     }
 
@@ -116,7 +116,8 @@ public final class Configuration {
                 unix().toBuilder()
                         .setDisplayName("OSX")
                         .setNameDisplayNormalization(NFC) // matches JDK 1.7u40+ behavior
-                        .setNameCanonicalNormalization(NFD, CASE_FOLD_ASCII) // NFD is default in HFS+
+                        .setNameCanonicalNormalization(
+                                NFD, CASE_FOLD_ASCII) // NFD is default in HFS+
                         .setSupportedFeatures(LINKS, SYMBOLIC_LINKS, FILE_CHANNEL)
                         .build();
     }
@@ -161,7 +162,8 @@ public final class Configuration {
                         .setRoots("C:\\")
                         .setWorkingDirectory("C:\\work")
                         .setNameCanonicalNormalization(CASE_FOLD_ASCII)
-                        .setPathEqualityUsesCanonicalForm(true) // matches real behavior of WindowsPath
+                        .setPathEqualityUsesCanonicalForm(
+                                true) // matches real behavior of WindowsPath
                         .setAttributeViews("basic")
                         .setSupportedFeatures(LINKS, SYMBOLIC_LINKS, FILE_CHANNEL)
                         .build();
@@ -250,24 +252,42 @@ public final class Configuration {
 
     @Override
     public String toString() {
-        return "Configuration{" +
-                "pathType=" + pathType +
-                ", nameDisplayNormalization=" + nameDisplayNormalization +
-                ", nameCanonicalNormalization=" + nameCanonicalNormalization +
-                ", pathEqualityUsesCanonicalForm=" + pathEqualityUsesCanonicalForm +
-                ", blockSize=" + blockSize +
-                ", maxSize=" + maxSize +
-                ", maxCacheSize=" + maxCacheSize +
-                ", attributeViews=" + attributeViews +
-                ", attributeProviders=" + attributeProviders +
-                ", defaultAttributeValues=" + defaultAttributeValues +
-                ", fileTimeSource=" + fileTimeSource +
-                ", watchServiceConfig=" + watchServiceConfig +
-                ", roots=" + roots +
-                ", workingDirectory='" + workingDirectory + '\'' +
-                ", supportedFeatures=" + supportedFeatures +
-                ", displayName='" + displayName + '\'' +
-                '}';
+        return "Configuration{"
+                + "pathType="
+                + pathType
+                + ", nameDisplayNormalization="
+                + nameDisplayNormalization
+                + ", nameCanonicalNormalization="
+                + nameCanonicalNormalization
+                + ", pathEqualityUsesCanonicalForm="
+                + pathEqualityUsesCanonicalForm
+                + ", blockSize="
+                + blockSize
+                + ", maxSize="
+                + maxSize
+                + ", maxCacheSize="
+                + maxCacheSize
+                + ", attributeViews="
+                + attributeViews
+                + ", attributeProviders="
+                + attributeProviders
+                + ", defaultAttributeValues="
+                + defaultAttributeValues
+                + ", fileTimeSource="
+                + fileTimeSource
+                + ", watchServiceConfig="
+                + watchServiceConfig
+                + ", roots="
+                + roots
+                + ", workingDirectory='"
+                + workingDirectory
+                + '\''
+                + ", supportedFeatures="
+                + supportedFeatures
+                + ", displayName='"
+                + displayName
+                + '\''
+                + '}';
     }
 
     /**
@@ -348,7 +368,8 @@ public final class Configuration {
          * Sets the normalizations that will be applied to the display form of filenames. The display
          * form is used in the {@code toString()} of {@code Path} objects.
          */
-        public Builder setNameDisplayNormalization(PathNormalization first, PathNormalization... more) {
+        public Builder setNameDisplayNormalization(
+                PathNormalization first, PathNormalization... more) {
             List<PathNormalization> list = new ArrayList<>(more.length + 1);
             list.add(first);
             list.addAll(List.of(more));
@@ -370,8 +391,7 @@ public final class Configuration {
             return this;
         }
 
-        private Set<PathNormalization> checkNormalizations(
-                List<PathNormalization> normalizations) {
+        private Set<PathNormalization> checkNormalizations(List<PathNormalization> normalizations) {
             PathNormalization none = null;
             PathNormalization normalization = null;
             PathNormalization caseFold = null;
@@ -388,8 +408,8 @@ public final class Configuration {
                         checkNormalizationNotSet(n, normalization);
                         normalization = n;
                         break;
-                    // TODO: re-enable this?
-                    // case CASE_FOLD_UNICODE:
+                        // TODO: re-enable this?
+                        // case CASE_FOLD_UNICODE:
                     case CASE_FOLD_ASCII:
                         checkNormalizationNotSet(n, caseFold);
                         caseFold = n;
@@ -405,8 +425,7 @@ public final class Configuration {
             return Set.copyOf(normalizations);
         }
 
-        private static void checkNormalizationNotSet(
-                PathNormalization n, PathNormalization set) {
+        private static void checkNormalizationNotSet(PathNormalization n, PathNormalization set) {
             if (set != null) {
                 throw new IllegalArgumentException(
                         "can't set normalization " + n + ": normalization " + set + " already set");
@@ -432,7 +451,8 @@ public final class Configuration {
          */
         public Builder setBlockSize(int blockSize) {
             if (blockSize <= 0) {
-                throw new IllegalArgumentException(String.format("blockSize (%s) must be positive", blockSize));
+                throw new IllegalArgumentException(
+                        String.format("blockSize (%s) must be positive", blockSize));
             }
             this.blockSize = blockSize;
             return this;
@@ -454,7 +474,8 @@ public final class Configuration {
          */
         public Builder setMaxSize(long maxSize) {
             if (maxSize <= 0) {
-                throw new IllegalArgumentException(String.format("maxSize (%s) must be positive", maxSize));
+                throw new IllegalArgumentException(
+                        String.format("maxSize (%s) must be positive", maxSize));
             }
             this.maxSize = maxSize;
             return this;
@@ -475,7 +496,8 @@ public final class Configuration {
          */
         public Builder setMaxCacheSize(long maxCacheSize) {
             if (maxCacheSize < 0) {
-                throw new IllegalArgumentException(String.format("maxCacheSize (%s) may not be negative", maxCacheSize));
+                throw new IllegalArgumentException(
+                        String.format("maxCacheSize (%s) may not be negative", maxCacheSize));
             }
             this.maxCacheSize = maxCacheSize;
             return this;
@@ -597,8 +619,10 @@ public final class Configuration {
          */
         public Builder setDefaultAttributeValue(String attribute, Object value) {
             if (!ATTRIBUTE_PATTERN.matcher(attribute).matches()) {
-                throw new IllegalArgumentException(String.format("attribute (%s) must be of the form \"view:attribute\"",
-                        attribute));
+                throw new IllegalArgumentException(
+                        String.format(
+                                "attribute (%s) must be of the form \"view:attribute\"",
+                                attribute));
             }
             Objects.requireNonNull(value);
 
@@ -655,8 +679,10 @@ public final class Configuration {
         public Builder setWorkingDirectory(String workingDirectory) {
             PathType.ParseResult parseResult = pathType.parsePath(workingDirectory);
             if (!parseResult.isAbsolute()) {
-                throw new IllegalArgumentException(String.format("working directory must be an absolute path: %s",
-                        workingDirectory));
+                throw new IllegalArgumentException(
+                        String.format(
+                                "working directory must be an absolute path: %s",
+                                workingDirectory));
             }
             this.workingDirectory = Objects.requireNonNull(workingDirectory);
             return this;

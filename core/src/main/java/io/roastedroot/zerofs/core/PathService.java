@@ -65,7 +65,8 @@ final class PathService implements Comparator<ZeroFsPath> {
             this.displayNormalizations.add(displayNormalizationsIter.next());
         }
         this.canonicalNormalizations = new TreeSet();
-        Iterator<PathNormalization> canonicalNormalizationsIter = canonicalNormalizations.iterator();
+        Iterator<PathNormalization> canonicalNormalizationsIter =
+                canonicalNormalizations.iterator();
         while (canonicalNormalizationsIter.hasNext()) {
             this.canonicalNormalizations.add(canonicalNormalizationsIter.next());
         }
@@ -164,7 +165,8 @@ final class PathService implements Comparator<ZeroFsPath> {
             }
         }
         if (root == null && nameList.isEmpty()) {
-            // ensure the canonical empty path (one empty string name) is used rather than a path with
+            // ensure the canonical empty path (one empty string name) is used rather than a path
+            // with
             // no root and no names
             return emptyPath();
         }
@@ -190,7 +192,7 @@ final class PathService implements Comparator<ZeroFsPath> {
         if (NOT_EMPTY.test(first)) {
             args.add(first);
         }
-        for (String e: more) {
+        for (String e : more) {
             if (NOT_EMPTY.test(e)) {
                 args.add(e);
             }
@@ -216,7 +218,8 @@ final class PathService implements Comparator<ZeroFsPath> {
     /** Creates a hash code for the given path. */
     public int hash(ZeroFsPath path) {
         // Note: JimfsPath.equals() is implemented using the compare() method below;
-        // equalityUsesCanonicalForm is taken into account there via the namesComparator, which is set
+        // equalityUsesCanonicalForm is taken into account there via the namesComparator, which is
+        // set
         // at construction time.
         int hash = 31;
         hash = 31 * hash + getFileSystem().hashCode();

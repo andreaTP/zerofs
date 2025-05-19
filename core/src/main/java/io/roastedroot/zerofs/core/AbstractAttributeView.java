@@ -11,14 +11,14 @@ import java.util.Objects;
  */
 abstract class AbstractAttributeView implements FileAttributeView {
 
-  private final FileLookup lookup;
+    private final FileLookup lookup;
 
-  protected AbstractAttributeView(FileLookup lookup) {
-    this.lookup = Objects.requireNonNull(lookup);
-  }
+    protected AbstractAttributeView(FileLookup lookup) {
+        this.lookup = Objects.requireNonNull(lookup);
+    }
 
-  /** Looks up the file to get or set attributes on. */
-  protected final File lookupFile() throws IOException {
-    return lookup.lookup();
-  }
+    /** Looks up the file to get or set attributes on. */
+    protected final File lookupFile() throws IOException {
+        return lookup.lookup();
+    }
 }

@@ -138,11 +138,15 @@ final class DirectoryEntry {
 
     @Override
     public String toString() {
-        return "DirectoryEntry{" +
-                "directory=" + directory +
-                ", name=" + name +
-                ", file=" + file +
-                ", next=" + next +
-                '}';
+        return "DirectoryEntry{"
+                + "directory="
+                + directory
+                + ", name="
+                + name
+                + ", file="
+                + file
+                + ", next="
+                + next
+                + '}';
     }
 }

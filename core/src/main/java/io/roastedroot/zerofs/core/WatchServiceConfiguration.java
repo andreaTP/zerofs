@@ -3,6 +3,7 @@ package io.roastedroot.zerofs.core;
 import static java.util.concurrent.TimeUnit.SECONDS;
 
 import java.nio.file.WatchService;
+import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -40,14 +41,19 @@ public abstract class WatchServiceConfiguration {
         private final TimeUnit timeUnit;
 
         private PollingConfig(long interval, TimeUnit timeUnit) {
-            checkArgument(interval > 0, "interval (%s) must be positive", interval);
+            if (interval <= 0) {
+                throw new IllegalArgumentException(
+                        String.format("interval (%s) must be positive", interval));
+            }
             this.interval = interval;
-            this.timeUnit = checkNotNull(timeUnit);
+            this.timeUnit = Objects.requireNonNull(timeUnit);
         }
 
         @Override
         AbstractWatchService newWatchService(FileSystemView view, PathService pathService) {
-            return new PollingWatchService(view, pathService, view.state(), interval, timeUnit);
+            // TODO: implement me
+            // return new PollingWatchService(view, pathService, view.state(), interval, timeUnit);
+            throw new IllegalArgumentException("TODO: implement me");
         }
 
         @Override
