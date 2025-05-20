@@ -26,7 +26,7 @@ final class HeapDisk {
      * Cache of free blocks to be allocated to files. While this is stored as a file, it isn't used
      * like a normal file: only the methods for accessing its blocks are used.
      */
-    private final RegularFile blockCache;
+    final RegularFile blockCache;
 
     /** The current total number of blocks that are currently allocated to files. */
     private int allocatedBlockCount;
