@@ -319,18 +319,13 @@ final class Directory extends File implements Iterable<DirectoryEntry> {
     public Iterator<DirectoryEntry> iterator() {
         return new Iterator<DirectoryEntry>() {
             private int index = 0;
-            private DirectoryEntry entry;
+            private DirectoryEntry entry = advanceToNextNonNull();
 
-            {
-                // Initial advance to the first non-null entry
-                advanceToNextEntry();
-            }
-
-            private void advanceToNextEntry() {
-                // Advance to the next non-null entry or next in chain
+            private DirectoryEntry advanceToNextNonNull() {
                 while (entry == null && index < table.length) {
                     entry = table[index++];
                 }
+                return entry;
             }
 
             @Override
@@ -343,14 +338,9 @@ final class Directory extends File implements Iterable<DirectoryEntry> {
                 if (entry == null) {
                     throw new NoSuchElementException();
                 }
-
                 DirectoryEntry current = entry;
                 entry = entry.next;
-
-                if (entry == null) {
-                    advanceToNextEntry();
-                }
-
+                advanceToNextNonNull();
                 return current;
             }
         };

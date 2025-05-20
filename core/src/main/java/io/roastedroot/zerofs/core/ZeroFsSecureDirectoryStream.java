@@ -13,6 +13,7 @@ import java.nio.file.SecureDirectoryStream;
 import java.nio.file.attribute.FileAttribute;
 import java.nio.file.attribute.FileAttributeView;
 import java.util.Iterator;
+import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.Set;
 
@@ -67,14 +68,15 @@ final class ZeroFsSecureDirectoryStream implements SecureDirectoryStream<Path> {
         }
     }
 
-    // TODO: carefully test the iterators ...
-    private final class DirectoryIterator implements Iterator<Path> {
+    public final class DirectoryIterator implements Iterator<Path> {
 
         private Iterator<Name> fileNames;
-        private boolean end = false;
-        private Path next = null;
+        private Path nextPath;
+        private boolean nextPathReady = false;
 
-        protected synchronized void computeNext() {
+        private void prepareNext() {
+            if (nextPathReady) return;
+
             checkOpen();
 
             try {
@@ -87,32 +89,35 @@ final class ZeroFsSecureDirectoryStream implements SecureDirectoryStream<Path> {
                     Path path = view.getWorkingDirectoryPath().resolve(name);
 
                     if (filter.accept(path)) {
-                        next = path;
+                        nextPath = path;
+                        nextPathReady = true;
+                        return;
                     }
                 }
 
-                next = null;
-                end = true;
+                nextPath = null;
+                nextPathReady = false;
             } catch (IOException e) {
                 throw new DirectoryIteratorException(e);
             }
         }
 
         @Override
-        public boolean hasNext() {
-            if (!end && next == null) {
-                computeNext();
-            }
-            return !end;
+        public synchronized boolean hasNext() {
+            prepareNext();
+            return nextPathReady;
         }
 
         @Override
-        public Path next() {
-            if (!end && next == null) {
-                computeNext();
+        public synchronized Path next() {
+            prepareNext();
+            if (!nextPathReady) {
+                throw new NoSuchElementException();
             }
-            var result = next;
-            next = null;
+
+            Path result = nextPath;
+            nextPath = null;
+            nextPathReady = false;
             return result;
         }
     }
