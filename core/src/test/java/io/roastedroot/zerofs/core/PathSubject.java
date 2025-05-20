@@ -45,6 +45,10 @@ public final class PathSubject {
         return actual.getFileSystem().getPath(path);
     }
 
+    public Path path() {
+        return this.actual;
+    }
+
     /** Returns this, for readability of chained assertions. */
     public PathSubject and() {
         return this;

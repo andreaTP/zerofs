@@ -203,7 +203,7 @@ final class ZeroFsFileSystem extends FileSystem {
         for (Name name : fileStore.getRootDirectoryNames()) {
             builder.add(pathService.createRoot(name));
         }
-        return (SortedSet<Path>) (SortedSet<?>) Set.copyOf(builder);
+        return (SortedSet<Path>) (SortedSet<?>) builder;
     }
 
     /** Returns the working directory path for this file system. */

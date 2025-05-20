@@ -190,12 +190,12 @@ final class ZeroFsFileStore extends FileStore {
 
     @Override
     public String name() {
-        return "jimfs";
+        return "zerofs";
     }
 
     @Override
     public String type() {
-        return "jimfs";
+        return "zerofs";
     }
 
     @Override

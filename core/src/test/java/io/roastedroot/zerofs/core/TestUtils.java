@@ -149,4 +149,21 @@ public final class TestUtils {
         }
         return result;
     }
+
+    public static byte[] concat(byte[]... arrays) {
+        long length = 0;
+        for (byte[] array : arrays) {
+            length += array.length;
+        }
+        if (length >= Integer.MAX_VALUE) {
+            throw new IllegalArgumentException("lenght");
+        }
+        byte[] result = new byte[(int) length];
+        int pos = 0;
+        for (byte[] array : arrays) {
+            System.arraycopy(array, 0, result, pos, array.length);
+            pos += array.length;
+        }
+        return result;
+    }
 }
