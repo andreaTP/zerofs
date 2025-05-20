@@ -10,6 +10,7 @@ import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.Set;
+import java.util.TreeSet;
 import java.util.regex.Pattern;
 import org.junit.jupiter.api.Test;
 
@@ -146,7 +147,9 @@ public class PathNormalizationTest {
 
     @Test
     public void testNormalizeNfcCaseFoldAscii() {
-        Set<PathNormalization> normalizations = Set.of(NFC, CASE_FOLD_ASCII);
+        Set<PathNormalization> normalizations = new TreeSet();
+        normalizations.add(NFC);
+        normalizations.add(CASE_FOLD_ASCII);
 
         for (String[] row : NORMALIZED_CASE_INSENSITIVE_ASCII_TEST_DATA) {
             for (int i = 0; i < row.length; i++) {
@@ -159,7 +162,9 @@ public class PathNormalizationTest {
 
     @Test
     public void testNormalizeNfdCaseFoldAscii() {
-        Set<PathNormalization> normalizations = Set.of(NFD, CASE_FOLD_ASCII);
+        Set<PathNormalization> normalizations = new TreeSet();
+        normalizations.add(NFD);
+        normalizations.add(CASE_FOLD_ASCII);
 
         for (String[] row : NORMALIZED_CASE_INSENSITIVE_ASCII_TEST_DATA) {
             for (int i = 0; i < row.length; i++) {
