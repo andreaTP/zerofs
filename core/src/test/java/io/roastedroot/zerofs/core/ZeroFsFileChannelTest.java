@@ -1,27 +1,26 @@
 package io.roastedroot.zerofs.core;
 
-import static com.google.common.jimfs.TestUtils.assertNotEquals;
-import static com.google.common.jimfs.TestUtils.buffer;
-import static com.google.common.jimfs.TestUtils.bytes;
-import static com.google.common.jimfs.TestUtils.regularFile;
-import static com.google.common.truth.Truth.assertWithMessage;
+import org.junit.jupiter.api.Test;
+
+import static io.roastedroot.zerofs.core.TestUtils.assertNotEquals;
+import static io.roastedroot.zerofs.core.TestUtils.buffer;
+import static io.roastedroot.zerofs.core.TestUtils.bytes;
+import static io.roastedroot.zerofs.core.TestUtils.regularFile;
 import static java.nio.file.StandardOpenOption.APPEND;
 import static java.nio.file.StandardOpenOption.READ;
 import static java.nio.file.StandardOpenOption.WRITE;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertSame;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
-import com.google.common.collect.ImmutableSet;
-import com.google.common.testing.NullPointerTester;
-import com.google.common.util.concurrent.Runnables;
-import com.google.common.util.concurrent.SettableFuture;
-import com.google.common.util.concurrent.Uninterruptibles;
 import java.io.IOException;
+import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 import java.nio.ByteBuffer;
 import java.nio.channels.AsynchronousCloseException;
 import java.nio.channels.ClosedByInterruptException;
@@ -36,15 +35,15 @@ import java.nio.file.attribute.FileTime;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
+import java.util.TreeSet;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.JUnit4;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * Most of the behavior of {@link JimfsFileChannel} is handled by the {@link RegularFile}
@@ -53,14 +52,17 @@ import org.junit.runners.JUnit4;
  *
  * @author Colin Decker
  */
-@RunWith(JUnit4.class)
-public class JimfsFileChannelTest {
+public class ZeroFsFileChannelTest {
 
   private static FileChannel channel(RegularFile file, OpenOption... options) throws IOException {
-    return new JimfsFileChannel(
+    Set<OpenOption> opts = new TreeSet<>();
+    for (OpenOption oo: options) {
+      opts.add(oo);
+    }
+    return new ZeroFsFileChannel(
         file,
-        Options.getOptionsForChannel(ImmutableSet.copyOf(options)),
-        new FileSystemState(new FakeFileTimeSource(), Runnables.doNothing()));
+        Options.getOptionsForChannel(opts),
+        new FileSystemState(new FakeFileTimeSource(), () -> {}));
   }
 
   @Test
@@ -215,10 +217,10 @@ public class JimfsFileChannelTest {
     RegularFile file = regularFile(10);
     FakeFileTimeSource fileTimeSource = new FakeFileTimeSource();
     FileChannel channel =
-        new JimfsFileChannel(
+        new ZeroFsFileChannel(
             file,
-            ImmutableSet.<OpenOption>of(READ, WRITE),
-            new FileSystemState(fileTimeSource, Runnables.doNothing()));
+            Set.<OpenOption>of(READ, WRITE),
+            new FileSystemState(fileTimeSource, () -> {}));
 
     // accessedTime
     FileTime accessTime = file.getLastAccessTime();
@@ -633,8 +635,10 @@ public class JimfsFileChannelTest {
   public void testNullPointerExceptions() throws IOException {
     FileChannel channel = channel(regularFile(100), READ, WRITE);
 
-    NullPointerTester tester = new NullPointerTester();
-    tester.testAllPublicInstanceMethods(channel);
+//    TODO: implement an equivalent functionality
+//    NullPointerTester tester = new NullPointerTester();
+//    tester.testAllPublicInstanceMethods(channel);
+    fail();
   }
 
   @Test
@@ -670,7 +674,8 @@ public class JimfsFileChannelTest {
     // wait for all the threads to have started running
     latch.await();
     // then ensure time for operations to start blocking
-    Uninterruptibles.sleepUninterruptibly(20, MILLISECONDS);
+    Thread.sleep(20);
+    // Uninterruptibles.sleepUninterruptibly(20, MILLISECONDS);
 
     // close channel on this thread
     channel.close();
@@ -682,9 +687,10 @@ public class JimfsFileChannelTest {
         future.get();
         fail();
       } catch (ExecutionException expected) {
-        assertWithMessage("blocking thread exception")
-            .that(expected.getCause())
-            .isInstanceOf(AsynchronousCloseException.class);
+        assertInstanceOf(AsynchronousCloseException.class, expected.getCause(), "blocking thread exception");
+//        assertWithMessage("blocking thread exception")
+//            .that(expected.getCause())
+//            .isInstanceOf(AsynchronousCloseException.class);
       }
     }
   }
@@ -699,7 +705,7 @@ public class JimfsFileChannelTest {
     ExecutorService executor = Executors.newCachedThreadPool();
 
     final CountDownLatch threadStartLatch = new CountDownLatch(1);
-    final SettableFuture<Throwable> interruptException = SettableFuture.create();
+    final AtomicReference<Throwable> interruptException = new AtomicReference<>();
 
     // This thread, being the first to run, will be blocking on the interruptible lock (the byte
     // file's write lock) and as such will be interrupted properly... the other threads will be
@@ -725,7 +731,8 @@ public class JimfsFileChannelTest {
     // let the thread start running
     threadStartLatch.await();
     // then ensure time for thread to start blocking on the write lock
-    Uninterruptibles.sleepUninterruptibly(10, MILLISECONDS);
+    Thread.sleep(10);
+    // Uninterruptibles.sleepUninterruptibly(10, MILLISECONDS);
 
     CountDownLatch blockingStartLatch = new CountDownLatch(BLOCKING_OP_COUNT);
     List<Future<?>> futures = queueAllBlockingOperations(channel, executor, blockingStartLatch);
@@ -733,7 +740,8 @@ public class JimfsFileChannelTest {
     // wait for all blocking threads to start
     blockingStartLatch.await();
     // then ensure time for the operations to start blocking
-    Uninterruptibles.sleepUninterruptibly(20, MILLISECONDS);
+    Thread.sleep(20);
+    // Uninterruptibles.sleepUninterruptibly(20, MILLISECONDS);
 
     // interrupting this blocking thread closes the channel and makes all the other threads
     // throw AsynchronousCloseException... the operation on this thread should throw
@@ -741,9 +749,11 @@ public class JimfsFileChannelTest {
     thread.interrupt();
 
     // get the exception that caused the interrupted operation to terminate
-    assertWithMessage("interrupted thread exception")
-        .that(interruptException.get(200, MILLISECONDS))
-        .isInstanceOf(ClosedByInterruptException.class);
+    Thread.sleep(200);
+    assertInstanceOf(ClosedByInterruptException.class, interruptException.get(), "interrupted thread exception");
+//    assertWithMessage("interrupted thread exception")
+//        .that(interruptException.get(200, MILLISECONDS))
+//        .isInstanceOf(ClosedByInterruptException.class);
 
     // check that each other thread got AsynchronousCloseException (since the interrupt, on a
     // different thread, closed the channel)
@@ -752,9 +762,10 @@ public class JimfsFileChannelTest {
         future.get();
         fail();
       } catch (ExecutionException expected) {
-        assertWithMessage("blocking thread exception")
-            .that(expected.getCause())
-            .isInstanceOf(AsynchronousCloseException.class);
+        assertInstanceOf(AsynchronousCloseException.class, expected.getCause(), "blocking thread exception");
+//        assertWithMessage("blocking thread exception")
+//            .that(expected.getCause())
+//            .isInstanceOf(AsynchronousCloseException.class);
       }
     }
   }
@@ -1027,8 +1038,8 @@ public class JimfsFileChannelTest {
           "expected the method to throw ClosedByInterruptException or "
               + "FileLockInterruptionException");
     } catch (ClosedByInterruptException | FileLockInterruptionException expected) {
-      assertFalse("expected the channel to be closed", channel.isOpen());
-      assertTrue("expected the thread to still be interrupted", Thread.interrupted());
+      assertFalse(channel.isOpen(), "expected the channel to be closed");
+      assertTrue(Thread.interrupted(), "expected the thread to still be interrupted");
     } finally {
       Thread.interrupted(); // ensure the thread isn't interrupted when this method returns
     }
