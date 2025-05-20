@@ -4,9 +4,10 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.nio.file.ClosedFileSystemException;
 import java.nio.file.attribute.FileTime;
+import java.util.Collections;
 import java.util.Objects;
 import java.util.Set;
-import java.util.concurrent.ConcurrentSkipListSet;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -19,7 +20,8 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 final class FileSystemState implements Closeable {
 
-    private final Set<Closeable> resources = new ConcurrentSkipListSet<>();
+    private final Set<Closeable> resources =
+            Collections.newSetFromMap(new ConcurrentHashMap<Closeable, Boolean>());
     private final FileTimeSource fileTimeSource;
     private final Runnable onClose;
 
