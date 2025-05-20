@@ -1,7 +1,11 @@
 package io.roastedroot.zerofs.core;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static io.roastedroot.zerofs.core.PathNormalization.CASE_FOLD_ASCII;
 import static io.roastedroot.zerofs.core.PathSubject.paths;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.net.URI;
@@ -25,44 +29,32 @@ public class PathServiceTest {
     @Test
     public void testBasicProperties() {
         assertEquals("/", service.getSeparator());
-        assertThat(fakeWindowsPathService().getSeparator()).isEqualTo("\\");
+        assertEquals("\\", fakeWindowsPathService().getSeparator());
     }
 
     @Test
     public void testPathCreation() {
-        assertAbout(paths())
-                .that(service.emptyPath())
-                .hasRootComponent(null)
-                .and()
-                .hasNameComponents("");
+        paths(service.emptyPath()).hasRootComponent(null).and().hasNameComponents("");
 
-        assertAbout(paths())
-                .that(service.createRoot(service.name("/")))
+        paths(service.createRoot(service.name("/")))
                 .isAbsolute()
                 .and()
                 .hasRootComponent("/")
                 .and()
                 .hasNoNameComponents();
 
-        assertAbout(paths())
-                .that(service.createFileName(service.name("foo")))
+        paths(service.createFileName(service.name("foo")))
                 .hasRootComponent(null)
                 .and()
                 .hasNameComponents("foo");
 
         ZeroFsPath relative =
-                service.createRelativePath(service.names(List.of("foo", "bar")));
-        assertAbout(paths())
-                .that(relative)
-                .hasRootComponent(null)
-                .and()
-                .hasNameComponents("foo", "bar");
+                service.createRelativePath(service.names(new String[] {"foo", "bar"}));
+        paths(relative).hasRootComponent(null).and().hasNameComponents("foo", "bar");
 
         ZeroFsPath absolute =
-                service.createPath(
-                        service.name("/"), service.names(List.of("foo", "bar")));
-        assertAbout(paths())
-                .that(absolute)
+                service.createPath(service.name("/"), service.names(new String[] {"foo", "bar"}));
+        paths(absolute)
                 .isAbsolute()
                 .and()
                 .hasRootComponent("/")
@@ -73,8 +65,7 @@ public class PathServiceTest {
     @Test
     public void testPathCreation_emptyPath() {
         // normalized to empty path with single empty string name
-        assertAbout(paths())
-                .that(service.createPath(null, List.<Name>of()))
+        paths(service.createPath(null, List.<Name>of()))
                 .hasRootComponent(null)
                 .and()
                 .hasNameComponents("");
@@ -84,59 +75,44 @@ public class PathServiceTest {
     public void testPathCreation_parseIgnoresEmptyString() {
         // if the empty string wasn't ignored, the resulting path would be "/foo" since the empty
         // string would be joined with foo
-        assertAbout(paths())
-                .that(service.parsePath("", "foo"))
-                .hasRootComponent(null)
-                .and()
-                .hasNameComponents("foo");
+        paths(service.parsePath("", "foo")).hasRootComponent(null).and().hasNameComponents("foo");
     }
 
     @Test
     public void testToString() {
         // not much to test for this since it just delegates to PathType anyway
-        ZeroFsPath path =
-                new ZeroFsPath(
-                        service, null, List.of(Name.simple("foo"), Name.simple("bar")));
-        assertThat(service.toString(path)).isEqualTo("foo/bar");
+        ZeroFsPath path = new ZeroFsPath(service, null, Name.simple("foo"), Name.simple("bar"));
+        assertEquals("foo/bar", service.toString(path));
 
-        path = new ZeroFsPath(service, Name.simple("/"), List.of(Name.simple("foo")));
-        assertThat(service.toString(path)).isEqualTo("/foo");
+        path = new ZeroFsPath(service, Name.simple("/"), Name.simple("foo"));
+        assertEquals("/foo", service.toString(path));
     }
 
     @Test
     public void testHash_usingDisplayForm() {
         PathService pathService = fakePathService(PathType.unix(), false);
 
-        ZeroFsPath path1 =
-                new ZeroFsPath(pathService, null, List.of(Name.create("FOO", "foo")));
-        ZeroFsPath path2 =
-                new ZeroFsPath(pathService, null, List.of(Name.create("FOO", "FOO")));
+        ZeroFsPath path1 = new ZeroFsPath(pathService, null, (Name.create("FOO", "foo")));
+        ZeroFsPath path2 = new ZeroFsPath(pathService, null, Name.create("FOO", "FOO"));
         ZeroFsPath path3 =
-                new ZeroFsPath(
-                        pathService,
-                        null,
-                        List.of(Name.create("FOO", "9874238974897189741")));
+                new ZeroFsPath(pathService, null, Name.create("FOO", "9874238974897189741"));
 
-        assertThat(pathService.hash(path1)).isEqualTo(pathService.hash(path2));
-        assertThat(pathService.hash(path2)).isEqualTo(pathService.hash(path3));
+        assertEquals(pathService.hash(path2), pathService.hash(path1));
+        assertEquals(pathService.hash(path3), pathService.hash(path2));
     }
 
     @Test
     public void testHash_usingCanonicalForm() {
         PathService pathService = fakePathService(PathType.unix(), true);
 
-        ZeroFsPath path1 =
-                new ZeroFsPath(pathService, null, List.of(Name.create("foo", "foo")));
-        ZeroFsPath path2 =
-                new ZeroFsPath(pathService, null, List.of(Name.create("FOO", "foo")));
+        ZeroFsPath path1 = new ZeroFsPath(pathService, null, Name.create("foo", "foo"));
+        ZeroFsPath path2 = new ZeroFsPath(pathService, null, Name.create("FOO", "foo"));
         ZeroFsPath path3 =
                 new ZeroFsPath(
-                        pathService,
-                        null,
-                        List.of(Name.create("28937497189478912374897", "foo")));
+                        pathService, null, List.of(Name.create("28937497189478912374897", "foo")));
 
-        assertThat(pathService.hash(path1)).isEqualTo(pathService.hash(path2));
-        assertThat(pathService.hash(path2)).isEqualTo(pathService.hash(path3));
+        assertEquals(pathService.hash(path2), pathService.hash(path1));
+        assertEquals(pathService.hash(path3), pathService.hash(path2));
     }
 
     @Test
@@ -147,8 +123,8 @@ public class PathServiceTest {
         ZeroFsPath path2 = new ZeroFsPath(pathService, null, List.of(Name.create("b", "y")));
         ZeroFsPath path3 = new ZeroFsPath(pathService, null, List.of(Name.create("c", "x")));
 
-        assertThat(pathService.compare(path1, path2)).isEqualTo(-1);
-        assertThat(pathService.compare(path2, path3)).isEqualTo(-1);
+        assertEquals(-1, pathService.compare(path1, path2));
+        assertEquals(-1, pathService.compare(path2, path3));
     }
 
     @Test
@@ -159,16 +135,16 @@ public class PathServiceTest {
         ZeroFsPath path2 = new ZeroFsPath(pathService, null, List.of(Name.create("b", "y")));
         ZeroFsPath path3 = new ZeroFsPath(pathService, null, List.of(Name.create("c", "x")));
 
-        assertThat(pathService.compare(path1, path2)).isEqualTo(1);
-        assertThat(pathService.compare(path2, path3)).isEqualTo(1);
+        assertEquals(1, pathService.compare(path1, path2));
+        assertEquals(1, pathService.compare(path2, path3));
     }
 
     @Test
     public void testPathMatcher() {
-        assertThat(service.createPathMatcher("regex:foo"))
-                .isInstanceOf(PathMatchers.RegexPathMatcher.class);
-        assertThat(service.createPathMatcher("glob:foo"))
-                .isInstanceOf(PathMatchers.RegexPathMatcher.class);
+        assertInstanceOf(
+                PathMatchers.RegexPathMatcher.class, service.createPathMatcher("regex:foo"));
+        assertInstanceOf(
+                PathMatchers.RegexPathMatcher.class, service.createPathMatcher("glob:foo"));
     }
 
     @Test
@@ -179,33 +155,19 @@ public class PathServiceTest {
         // Windows
         // not normalizing case for display.
         assertCaseInsensitiveMatches(
-                new PathService(
-                        PathType.unix(),
-                        NO_NORMALIZATIONS,
-                        ImmutableSet.of(CASE_FOLD_ASCII),
-                        true));
+                new PathService(PathType.unix(), NO_NORMALIZATIONS, Set.of(CASE_FOLD_ASCII), true));
         assertCaseSensitiveMatches(
-                new PathService(
-                        PathType.unix(),
-                        ImmutableSet.of(CASE_FOLD_ASCII),
-                        NO_NORMALIZATIONS,
-                        true));
+                new PathService(PathType.unix(), Set.of(CASE_FOLD_ASCII), NO_NORMALIZATIONS, true));
     }
 
     @Test
     public void testPathMatcher_usingDisplayForm_usesDisplayNormalizations() {
         assertCaseInsensitiveMatches(
                 new PathService(
-                        PathType.unix(),
-                        ImmutableSet.of(CASE_FOLD_ASCII),
-                        NO_NORMALIZATIONS,
-                        false));
+                        PathType.unix(), Set.of(CASE_FOLD_ASCII), NO_NORMALIZATIONS, false));
         assertCaseSensitiveMatches(
                 new PathService(
-                        PathType.unix(),
-                        NO_NORMALIZATIONS,
-                        ImmutableSet.of(CASE_FOLD_ASCII),
-                        false));
+                        PathType.unix(), NO_NORMALIZATIONS, Set.of(CASE_FOLD_ASCII), false));
     }
 
     private static void assertCaseInsensitiveMatches(PathService service) {
@@ -219,9 +181,9 @@ public class PathServiceTest {
         ZeroFsPath nonMatchingPath = singleNamePath(service, "bar");
 
         for (PathMatcher matcher : matchers) {
-            assertThat(matcher.matches(lowerCasePath)).isTrue();
-            assertThat(matcher.matches(upperCasePath)).isTrue();
-            assertThat(matcher.matches(nonMatchingPath)).isFalse();
+            assertTrue(matcher.matches(lowerCasePath));
+            assertTrue(matcher.matches(upperCasePath));
+            assertFalse(matcher.matches(nonMatchingPath));
         }
     }
 
@@ -231,8 +193,8 @@ public class PathServiceTest {
         ZeroFsPath lowerCasePath = singleNamePath(service, "foo");
         ZeroFsPath upperCasePath = singleNamePath(service, "FOO");
 
-        assertThat(matcher.matches(lowerCasePath)).isTrue();
-        assertThat(matcher.matches(upperCasePath)).isFalse();
+        assertTrue(matcher.matches(lowerCasePath));
+        assertFalse(matcher.matches(upperCasePath));
     }
 
     public static PathService fakeUnixPathService() {
@@ -252,7 +214,7 @@ public class PathServiceTest {
     }
 
     private static ZeroFsPath singleNamePath(PathService service, String name) {
-        return new ZeroFsPath(service, null, List.of(Name.create(name, name)));
+        return new ZeroFsPath(service, null, new Name[] {Name.create(name, name)});
     }
 
     private static final FileSystem FILE_SYSTEM;
@@ -262,7 +224,7 @@ public class PathServiceTest {
             FILE_SYSTEM =
                     ZeroFsFileSystems.newFileSystem(
                             new ZeroFsFileSystemProvider(),
-                            URI.create("ZeroFs://foo"),
+                            URI.create("zerofs://foo"),
                             Configuration.unix());
         } catch (IOException e) {
             throw new AssertionError(e);

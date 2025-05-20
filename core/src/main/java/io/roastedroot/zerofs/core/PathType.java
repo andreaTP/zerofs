@@ -213,7 +213,7 @@ public abstract class PathType {
 
         /** Returns whether or not this result represents a root path. */
         public boolean isRoot() {
-            return root != null && !(names.length == 0);
+            return root != null && (names == null || names.length == 0);
         }
 
         /** Returns the parsed root element, or null if there was no root. */

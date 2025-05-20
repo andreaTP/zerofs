@@ -62,7 +62,7 @@ public class FileTest {
         File file = regularFile(10);
         assertFalse(file.isDirectory());
         assertTrue(file.isRegularFile());
-        assertTrue(file.isSymbolicLink());
+        assertFalse(file.isSymbolicLink());
     }
 
     @Test
@@ -73,17 +73,17 @@ public class FileTest {
         assertTrue(file.isSymbolicLink());
     }
 
-      @Test
-      public void testRootDirectory() {
+    @Test
+    public void testRootDirectory() {
         Directory file = Directory.createRoot(0, fileTimeSource.now(), Name.simple("/"));
         assertTrue(file.isRootDirectory());
 
         Directory otherFile = Directory.createRoot(1, fileTimeSource.now(), Name.simple("$"));
         assertTrue(otherFile.isRootDirectory());
-      }
+    }
 
-      @Test
-      public void testLinkAndUnlink() {
+    @Test
+    public void testLinkAndUnlink() {
         File file = regularFile(0);
         assertEquals(0, file.links());
 
@@ -98,5 +98,5 @@ public class FileTest {
 
         file.decrementLinkCount();
         assertEquals(0, file.links());
-      }
+    }
 }

@@ -34,10 +34,14 @@ final class ZeroFsPath implements Path {
     private final List<Name> names;
     private final PathService pathService;
 
-    public ZeroFsPath(PathService pathService, Name root, Name[] names) {
+    public ZeroFsPath(PathService pathService, Name root, Name... names) {
+        this(pathService, root, List.of(names));
+    }
+
+    public ZeroFsPath(PathService pathService, Name root, List<Name> names) {
         this.pathService = Objects.requireNonNull(pathService);
         this.root = root;
-        this.names = List.of(names);
+        this.names = names;
     }
 
     /** Returns the root name, or null if there is no root. */

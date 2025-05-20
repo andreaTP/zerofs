@@ -178,10 +178,7 @@ final class PathService implements Comparator<ZeroFsPath> {
         List<Name> nameList = new ArrayList();
         Iterator<Name> namesIter = names.iterator();
         while (namesIter.hasNext()) {
-            Name current = namesIter.next();
-            if (NOT_EMPTY.test(current)) {
-                nameList.add(current);
-            }
+            nameList.add(namesIter.next());
         }
         return new ZeroFsPath(this, root, nameList.toArray(Name[]::new));
     }
