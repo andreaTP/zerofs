@@ -120,7 +120,7 @@ public final class SystemZeroFsFileSystemProvider extends FileSystemProvider {
 
         String path = uri.getPath();
 
-        if (!stringIsNullOrEmpty(path)) {
+        if (stringIsNullOrEmpty(path)) {
             throw new IllegalArgumentException(String.format("uri must have a path: %s", uri));
         }
 
