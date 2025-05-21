@@ -311,7 +311,7 @@
         <configuration>
           <archive>
             <manifestEntries>
-              <Automatic-Module-Name>io.roastedroot.zerofs.core.ZeroFs</Automatic-Module-Name>
+              <Automatic-Module-Name>io.roastedroot.zerofs.ZeroFs</Automatic-Module-Name>
             </manifestEntries>
           </archive>
         </configuration>
