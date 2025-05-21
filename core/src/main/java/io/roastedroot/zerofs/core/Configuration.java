@@ -408,8 +408,7 @@ public final class Configuration {
                         checkNormalizationNotSet(n, normalization);
                         normalization = n;
                         break;
-                        // TODO: re-enable this?
-                        // case CASE_FOLD_UNICODE:
+                    case CASE_FOLD_UNICODE:
                     case CASE_FOLD_ASCII:
                         checkNormalizationNotSet(n, caseFold);
                         caseFold = n;

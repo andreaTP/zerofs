@@ -248,6 +248,9 @@ public class ZeroFsUnixLikeFileSystemTest extends AbstractZeroFsIntegrationTest 
         assertEquals(path("/work/foo/bar"), p2);
     }
 
+    // TODO: toRealPath breaks, I need more unit tests to identify the cause, let's keep this test
+    // failing for now
+    // I'll move on on this later on
     @Test
     public void testPaths_toRealPath() throws IOException {
         Files.createDirectories(path("/foo/bar"));
