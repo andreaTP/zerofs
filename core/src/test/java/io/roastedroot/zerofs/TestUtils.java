@@ -166,4 +166,12 @@ public final class TestUtils {
         }
         return result;
     }
+
+    public static List<Byte> bytesAsList(byte[] array) {
+        List<Byte> list = new ArrayList<>(array.length);
+        for (byte b : array) {
+            list.add(b); // auto-boxing
+        }
+        return list;
+    }
 }

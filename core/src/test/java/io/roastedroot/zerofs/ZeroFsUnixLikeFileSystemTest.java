@@ -1,6 +1,17 @@
 package io.roastedroot.zerofs;
 
+import static io.roastedroot.zerofs.TestUtils.bytesAsList;
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.nio.file.LinkOption.NOFOLLOW_LINKS;
+import static java.nio.file.StandardOpenOption.APPEND;
+import static java.nio.file.StandardOpenOption.CREATE;
+import static java.nio.file.StandardOpenOption.CREATE_NEW;
+import static java.nio.file.StandardOpenOption.DSYNC;
+import static java.nio.file.StandardOpenOption.READ;
+import static java.nio.file.StandardOpenOption.SPARSE;
+import static java.nio.file.StandardOpenOption.SYNC;
+import static java.nio.file.StandardOpenOption.TRUNCATE_EXISTING;
+import static java.nio.file.StandardOpenOption.WRITE;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -11,12 +22,21 @@ import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import java.net.URI;
+import java.nio.ByteBuffer;
+import java.nio.channels.FileChannel;
+import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.FileStore;
 import java.nio.file.FileSystem;
 import java.nio.file.Files;
+import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.attribute.FileAttribute;
+import java.nio.file.attribute.FileTime;
+import java.nio.file.attribute.PosixFilePermission;
+import java.nio.file.attribute.PosixFilePermissions;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeSet;
@@ -248,9 +268,6 @@ public class ZeroFsUnixLikeFileSystemTest extends AbstractZeroFsIntegrationTest 
         assertEquals(path("/work/foo/bar"), p2);
     }
 
-    // TODO: toRealPath breaks, I need more unit tests to identify the cause, let's keep this test
-    // failing for now
-    // I'll move on on this later on
     @Test
     public void testPaths_toRealPath() throws IOException {
         Files.createDirectories(path("/foo/bar"));
@@ -385,558 +402,555 @@ public class ZeroFsUnixLikeFileSystemTest extends AbstractZeroFsIntegrationTest 
         assertThatPath("/foo/link.txt").noFollowLinks().isSymbolicLink().withTarget("test.txt");
         assertThatPath("/foo").hasChildren("link.txt");
     }
-    //
-    //  @Test
-    //  public void testCreateLink_absolute() throws IOException {
-    //    Files.createFile(path("/test.txt"));
-    //    Files.createLink(path("/link.txt"), path("/test.txt"));
-    //
-    //    // don't assert that the link is the same file here, just that it was created
-    //    // later tests check that linking works correctly
-    //    assertThatPath("/link.txt", NOFOLLOW_LINKS).isRegularFile();
-    //    assertThatPath("/").hasChildren("link.txt", "test.txt", "work");
-    //
-    //    Files.createDirectory(path("/foo"));
-    //    Files.createLink(path("/foo/link.txt"), path("/test.txt"));
-    //
-    //    assertThatPath("/foo/link.txt", NOFOLLOW_LINKS).isRegularFile();
-    //    assertThatPath("/foo").hasChildren("link.txt");
-    //  }
-    //
-    //  @Test
-    //  public void testCreateDirectory_relative() throws IOException {
-    //    Files.createDirectory(path("test"));
-    //
-    //    assertThatPath("/work/test", NOFOLLOW_LINKS).isDirectory();
-    //    assertThatPath("test", NOFOLLOW_LINKS).isDirectory();
-    //    assertThatPath("/work").hasChildren("test");
-    //    assertThatPath("test").isSameFileAs("/work/test");
-    //
-    //    Files.createDirectory(path("foo"));
-    //    Files.createDirectory(path("foo/bar"));
-    //
-    //    assertThatPath("/work/foo/bar", NOFOLLOW_LINKS).isDirectory();
-    //    assertThatPath("foo/bar", NOFOLLOW_LINKS).isDirectory();
-    //    assertThatPath("/work/foo").hasChildren("bar");
-    //    assertThatPath("foo").hasChildren("bar");
-    //    assertThatPath("foo/bar").isSameFileAs("/work/foo/bar");
-    //  }
-    //
-    //  @Test
-    //  public void testCreateFile_relative() throws IOException {
-    //    Files.createFile(path("test.txt"));
-    //
-    //    assertThatPath("/work/test.txt", NOFOLLOW_LINKS).isRegularFile();
-    //    assertThatPath("test.txt", NOFOLLOW_LINKS).isRegularFile();
-    //    assertThatPath("/work").hasChildren("test.txt");
-    //    assertThatPath("test.txt").isSameFileAs("/work/test.txt");
-    //
-    //    Files.createDirectory(path("foo"));
-    //    Files.createFile(path("foo/test.txt"));
-    //
-    //    assertThatPath("/work/foo/test.txt", NOFOLLOW_LINKS).isRegularFile();
-    //    assertThatPath("foo/test.txt", NOFOLLOW_LINKS).isRegularFile();
-    //    assertThatPath("/work/foo").hasChildren("test.txt");
-    //    assertThatPath("foo").hasChildren("test.txt");
-    //    assertThatPath("foo/test.txt").isSameFileAs("/work/foo/test.txt");
-    //  }
-    //
-    //  @Test
-    //  public void testCreateSymbolicLink_relative() throws IOException {
-    //    Files.createSymbolicLink(path("link.txt"), path("test.txt"));
-    //
-    //    assertThatPath("/work/link.txt", NOFOLLOW_LINKS).isSymbolicLink().withTarget("test.txt");
-    //    assertThatPath("link.txt", NOFOLLOW_LINKS).isSymbolicLink().withTarget("test.txt");
-    //    assertThatPath("/work").hasChildren("link.txt");
-    //
-    //    Files.createDirectory(path("foo"));
-    //    Files.createSymbolicLink(path("foo/link.txt"), path("test.txt"));
-    //
-    //    assertThatPath("/work/foo/link.txt",
-    // NOFOLLOW_LINKS).isSymbolicLink().withTarget("test.txt");
-    //    assertThatPath("foo/link.txt", NOFOLLOW_LINKS).isSymbolicLink().withTarget("test.txt");
-    //    assertThatPath("/work/foo").hasChildren("link.txt");
-    //    assertThatPath("foo").hasChildren("link.txt");
-    //  }
-    //
-    //  @Test
-    //  public void testCreateLink_relative() throws IOException {
-    //    Files.createFile(path("test.txt"));
-    //    Files.createLink(path("link.txt"), path("test.txt"));
-    //
-    //    // don't assert that the link is the same file here, just that it was created
-    //    // later tests check that linking works correctly
-    //    assertThatPath("/work/link.txt", NOFOLLOW_LINKS).isRegularFile();
-    //    assertThatPath("link.txt", NOFOLLOW_LINKS).isRegularFile();
-    //    assertThatPath("/work").hasChildren("link.txt", "test.txt");
-    //
-    //    Files.createDirectory(path("foo"));
-    //    Files.createLink(path("foo/link.txt"), path("test.txt"));
-    //
-    //    assertThatPath("/work/foo/link.txt", NOFOLLOW_LINKS).isRegularFile();
-    //    assertThatPath("foo/link.txt", NOFOLLOW_LINKS).isRegularFile();
-    //    assertThatPath("foo").hasChildren("link.txt");
-    //  }
-    //
-    //  @Test
-    //  public void testCreateFile_existing() throws IOException {
-    //    Files.createFile(path("/test"));
-    //    try {
-    //      Files.createFile(path("/test"));
-    //      fail();
-    //    } catch (FileAlreadyExistsException expected) {
-    //      assertEquals("/test", expected.getMessage());
-    //    }
-    //
-    //    try {
-    //      Files.createDirectory(path("/test"));
-    //      fail();
-    //    } catch (FileAlreadyExistsException expected) {
-    //      assertEquals("/test", expected.getMessage());
-    //    }
-    //
-    //    try {
-    //      Files.createSymbolicLink(path("/test"), path("/foo"));
-    //      fail();
-    //    } catch (FileAlreadyExistsException expected) {
-    //      assertEquals("/test", expected.getMessage());
-    //    }
-    //
-    //    Files.createFile(path("/foo"));
-    //    try {
-    //      Files.createLink(path("/test"), path("/foo"));
-    //      fail();
-    //    } catch (FileAlreadyExistsException expected) {
-    //      assertEquals("/test", expected.getMessage());
-    //    }
-    //  }
-    //
-    //  @Test
-    //  public void testCreateFile_parentDoesNotExist() throws IOException {
-    //    try {
-    //      Files.createFile(path("/foo/test"));
-    //      fail();
-    //    } catch (NoSuchFileException expected) {
-    //      assertEquals("/foo/test", expected.getMessage());
-    //    }
-    //
-    //    try {
-    //      Files.createDirectory(path("/foo/test"));
-    //      fail();
-    //    } catch (NoSuchFileException expected) {
-    //      assertEquals("/foo/test", expected.getMessage());
-    //    }
-    //
-    //    try {
-    //      Files.createSymbolicLink(path("/foo/test"), path("/bar"));
-    //      fail();
-    //    } catch (NoSuchFileException expected) {
-    //      assertEquals("/foo/test", expected.getMessage());
-    //    }
-    //
-    //    Files.createFile(path("/bar"));
-    //    try {
-    //      Files.createLink(path("/foo/test"), path("/bar"));
-    //      fail();
-    //    } catch (NoSuchFileException expected) {
-    //      assertEquals("/foo/test", expected.getMessage());
-    //    }
-    //  }
-    //
-    //  @Test
-    //  public void testCreateFile_parentIsNotDirectory() throws IOException {
-    //    Files.createDirectory(path("/foo"));
-    //    Files.createFile(path("/foo/bar"));
-    //
-    //    try {
-    //      Files.createFile(path("/foo/bar/baz"));
-    //      fail();
-    //    } catch (NoSuchFileException expected) {
-    //      assertEquals("/foo/bar/baz", expected.getFile());
-    //    }
-    //  }
-    //
-    //  @Test
-    //  public void testCreateFile_nonDirectoryHigherInPath() throws IOException {
-    //    Files.createDirectory(path("/foo"));
-    //    Files.createFile(path("/foo/bar"));
-    //
-    //    try {
-    //      Files.createFile(path("/foo/bar/baz/stuff"));
-    //      fail();
-    //    } catch (NoSuchFileException expected) {
-    //      assertEquals("/foo/bar/baz/stuff", expected.getFile());
-    //    }
-    //  }
-    //
-    //  @Test
-    //  public void testCreateFile_parentSymlinkDoesNotExist() throws IOException {
-    //    Files.createDirectory(path("/foo"));
-    //    Files.createSymbolicLink(path("/foo/bar"), path("/foo/nope"));
-    //
-    //    try {
-    //      Files.createFile(path("/foo/bar/baz"));
-    //      fail();
-    //    } catch (NoSuchFileException expected) {
-    //      assertEquals("/foo/bar/baz", expected.getFile());
-    //    }
-    //  }
-    //
-    //  @Test
-    //  public void testCreateFile_symlinkHigherInPathDoesNotExist() throws IOException {
-    //    Files.createDirectory(path("/foo"));
-    //    Files.createSymbolicLink(path("/foo/bar"), path("nope"));
-    //
-    //    try {
-    //      Files.createFile(path("/foo/bar/baz/stuff"));
-    //      fail();
-    //    } catch (NoSuchFileException expected) {
-    //      assertEquals("/foo/bar/baz/stuff", expected.getFile());
-    //    }
-    //  }
-    //
-    //  @Test
-    //  public void testCreateFile_parentSymlinkDoesPointsToNonDirectory() throws IOException {
-    //    Files.createDirectory(path("/foo"));
-    //    Files.createFile(path("/foo/file"));
-    //    Files.createSymbolicLink(path("/foo/bar"), path("/foo/file"));
-    //
-    //    try {
-    //      Files.createFile(path("/foo/bar/baz"));
-    //      fail();
-    //    } catch (NoSuchFileException expected) {
-    //      assertEquals("/foo/bar/baz", expected.getFile());
-    //    }
-    //  }
-    //
-    //  @Test
-    //  public void testCreateFile_symlinkHigherInPathPointsToNonDirectory() throws IOException {
-    //    Files.createDirectory(path("/foo"));
-    //    Files.createFile(path("/foo/file"));
-    //    Files.createSymbolicLink(path("/foo/bar"), path("file"));
-    //
-    //    try {
-    //      Files.createFile(path("/foo/bar/baz/stuff"));
-    //      fail();
-    //    } catch (NoSuchFileException expected) {
-    //      assertEquals("/foo/bar/baz/stuff", expected.getFile());
-    //    }
-    //  }
-    //
-    //  @Test
-    //  public void testCreateFile_withInitialAttributes() throws IOException {
-    //    Set<PosixFilePermission> permissions = PosixFilePermissions.fromString("rwxrwxrwx");
-    //    FileAttribute<?> permissionsAttr = PosixFilePermissions.asFileAttribute(permissions);
-    //
-    //    Files.createFile(path("/normal"));
-    //    Files.createFile(path("/foo"), permissionsAttr);
-    //
-    //    assertThatPath("/normal").attribute("posix:permissions").isNot(permissions);
-    //    assertThatPath("/foo").attribute("posix:permissions").is(permissions);
-    //  }
-    //
-    //  @Test
-    //  public void testCreateFile_withInitialAttributes_illegalInitialAttribute() throws
-    // IOException {
-    //    try {
-    //      Files.createFile(
-    //          path("/foo"),
-    //          new BasicFileAttribute<>("basic:lastModifiedTime", FileTime.fromMillis(0L)));
-    //      fail();
-    //    } catch (UnsupportedOperationException expected) {
-    //    }
-    //
-    //    assertThatPath("/foo").doesNotExist();
-    //
-    //    try {
-    //      Files.createFile(path("/foo"), new BasicFileAttribute<>("basic:noSuchAttribute",
-    // "foo"));
-    //      fail();
-    //    } catch (UnsupportedOperationException expected) {
-    //    }
-    //
-    //    assertThatPath("/foo").doesNotExist();
-    //  }
-    //
-    //  @Test
-    //  public void testOpenChannel_withInitialAttributes_createNewFile() throws IOException {
-    //    FileAttribute<Set<PosixFilePermission>> permissions =
-    //        PosixFilePermissions.asFileAttribute(PosixFilePermissions.fromString("rwxrwxrwx"));
-    //    Files.newByteChannel(path("/foo"), ImmutableSet.of(WRITE, CREATE), permissions).close();
-    //
-    //    assertThatPath("/foo")
-    //        .isRegularFile()
-    //        .and()
-    //        .attribute("posix:permissions")
-    //        .is(permissions.value());
-    //  }
-    //
-    //  @Test
-    //  public void testOpenChannel_withInitialAttributes_fileExists() throws IOException {
-    //    Files.createFile(path("/foo"));
-    //
-    //    FileAttribute<Set<PosixFilePermission>> permissions =
-    //        PosixFilePermissions.asFileAttribute(PosixFilePermissions.fromString("rwxrwxrwx"));
-    //    Files.newByteChannel(path("/foo"), ImmutableSet.of(WRITE, CREATE), permissions).close();
-    //
-    //    assertThatPath("/foo")
-    //        .isRegularFile()
-    //        .and()
-    //        .attribute("posix:permissions")
-    //        .isNot(permissions.value());
-    //  }
-    //
-    //  @Test
-    //  public void testCreateDirectory_withInitialAttributes() throws IOException {
-    //    FileAttribute<Set<PosixFilePermission>> permissions =
-    //        PosixFilePermissions.asFileAttribute(PosixFilePermissions.fromString("rwxrwxrwx"));
-    //
-    //    Files.createDirectory(path("/foo"), permissions);
-    //
-    //    assertThatPath("/foo")
-    //        .isDirectory()
-    //        .and()
-    //        .attribute("posix:permissions")
-    //        .is(permissions.value());
-    //
-    //    Files.createDirectory(path("/normal"));
-    //
-    //    assertThatPath("/normal")
-    //        .isDirectory()
-    //        .and()
-    //        .attribute("posix:permissions")
-    //        .isNot(permissions.value());
-    //  }
-    //
-    //  @Test
-    //  public void testCreateSymbolicLink_withInitialAttributes() throws IOException {
-    //    FileAttribute<Set<PosixFilePermission>> permissions =
-    //        PosixFilePermissions.asFileAttribute(PosixFilePermissions.fromString("rwxrwxrwx"));
-    //
-    //    Files.createSymbolicLink(path("/foo"), path("bar"), permissions);
-    //
-    //    assertThatPath("/foo", NOFOLLOW_LINKS)
-    //        .isSymbolicLink()
-    //        .and()
-    //        .attribute("posix:permissions")
-    //        .is(permissions.value());
-    //
-    //    Files.createSymbolicLink(path("/normal"), path("bar"));
-    //
-    //    assertThatPath("/normal", NOFOLLOW_LINKS)
-    //        .isSymbolicLink()
-    //        .and()
-    //        .attribute("posix:permissions")
-    //        .isNot(permissions.value());
-    //  }
-    //
-    //  @Test
-    //  public void testCreateDirectories() throws IOException {
-    //    Files.createDirectories(path("/foo/bar/baz"));
-    //
-    //    assertThatPath("/foo").isDirectory();
-    //    assertThatPath("/foo/bar").isDirectory();
-    //    assertThatPath("/foo/bar/baz").isDirectory();
-    //
-    //    Files.createDirectories(path("/foo/asdf/jkl"));
-    //
-    //    assertThatPath("/foo/asdf").isDirectory();
-    //    assertThatPath("/foo/asdf/jkl").isDirectory();
-    //
-    //    Files.createDirectories(path("bar/baz"));
-    //
-    //    assertThatPath("bar/baz").isDirectory();
-    //    assertThatPath("/work/bar/baz").isDirectory();
-    //  }
-    //
-    //  @Test
-    //  public void testDirectories_newlyCreatedDirectoryHasTwoLinks() throws IOException {
-    //    // one link from its parent to it; one from it to itself
-    //
-    //    Files.createDirectory(path("/foo"));
-    //
-    //    assertThatPath("/foo").hasLinkCount(2);
-    //  }
-    //
-    //  @Test
-    //  public void testDirectories_creatingDirectoryAddsOneLinkToParent() throws IOException {
-    //    // from the .. direntry
-    //
-    //    Files.createDirectory(path("/foo"));
-    //    Files.createDirectory(path("/foo/bar"));
-    //
-    //    assertThatPath("/foo").hasLinkCount(3);
-    //
-    //    Files.createDirectory(path("/foo/baz"));
-    //
-    //    assertThatPath("/foo").hasLinkCount(4);
-    //  }
-    //
-    //  @Test
-    //  public void testDirectories_creatingNonDirectoryDoesNotAddLinkToParent() throws IOException
-    // {
-    //    Files.createDirectory(path("/foo"));
-    //    Files.createFile(path("/foo/file"));
-    //    Files.createSymbolicLink(path("/foo/fileSymlink"), path("file"));
-    //    Files.createLink(path("/foo/link"), path("/foo/file"));
-    //    Files.createSymbolicLink(path("/foo/fooSymlink"), path("/foo"));
-    //
-    //    assertThatPath("/foo").hasLinkCount(2);
-    //  }
-    //
-    //  @Test
-    //  public void testSize_forNewFile_isZero() throws IOException {
-    //    Files.createFile(path("/test"));
-    //
-    //    assertThatPath("/test").hasSize(0);
-    //  }
-    //
-    //  @Test
-    //  public void testRead_forNewFile_isEmpty() throws IOException {
-    //    Files.createFile(path("/test"));
-    //
-    //    assertThatPath("/test").containsNoBytes();
-    //  }
-    //
-    //  @Test
-    //  public void testWriteFile_succeeds() throws IOException {
-    //    Files.createFile(path("/test"));
-    //    Files.write(path("/test"), new byte[] {0, 1, 2, 3});
-    //  }
-    //
-    //  @Test
-    //  public void testSize_forFileAfterWrite_isNumberOfBytesWritten() throws IOException {
-    //    Files.write(path("/test"), new byte[] {0, 1, 2, 3});
-    //
-    //    assertThatPath("/test").hasSize(4);
-    //  }
-    //
-    //  @Test
-    //  public void testRead_forFileAfterWrite_isBytesWritten() throws IOException {
-    //    byte[] bytes = {0, 1, 2, 3};
-    //    Files.write(path("/test"), bytes);
-    //
-    //    assertThatPath("/test").containsBytes(bytes);
-    //  }
-    //
-    //  @Test
-    //  public void testWriteFile_withStandardOptions() throws IOException {
-    //    Path test = path("/test");
-    //    byte[] bytes = {0, 1, 2, 3};
-    //
-    //    try {
-    //      // CREATE and CREATE_NEW not specified
-    //      Files.write(test, bytes, WRITE);
-    //      fail();
-    //    } catch (NoSuchFileException expected) {
-    //      assertEquals(test.toString(), expected.getMessage());
-    //    }
-    //
-    //    Files.write(test, bytes, CREATE_NEW); // succeeds, file does not exist
-    //    assertThatPath("/test").containsBytes(bytes);
-    //
-    //    try {
-    //      Files.write(test, bytes, CREATE_NEW); // CREATE_NEW requires file not exist
-    //      fail();
-    //    } catch (FileAlreadyExistsException expected) {
-    //      assertEquals(test.toString(), expected.getMessage());
-    //    }
-    //
-    //    Files.write(test, new byte[] {4, 5}, CREATE); // succeeds, ok for file to already exist
-    //    assertThatPath("/test").containsBytes(4, 5, 2, 3); // did not truncate or append, so
-    // overwrote
-    //
-    //    Files.write(test, bytes, WRITE, CREATE, TRUNCATE_EXISTING); // default options
-    //    assertThatPath("/test").containsBytes(bytes);
-    //
-    //    Files.write(test, bytes, WRITE, APPEND);
-    //    assertThatPath("/test").containsBytes(0, 1, 2, 3, 0, 1, 2, 3);
-    //
-    //    Files.write(test, bytes, WRITE, CREATE, TRUNCATE_EXISTING, APPEND, SPARSE, DSYNC, SYNC);
-    //    assertThatPath("/test").containsBytes(bytes);
-    //
-    //    try {
-    //      Files.write(test, bytes, READ, WRITE); // READ not allowed
-    //      fail();
-    //    } catch (UnsupportedOperationException expected) {
-    //    }
-    //  }
-    //
-    //  @Test
-    //  public void testWriteLines_succeeds() throws IOException {
-    //    Files.write(path("/test.txt"), ImmutableList.of("hello", "world"), UTF_8);
-    //  }
-    //
-    //  @Test
-    //  public void testOpenFile_withReadAndTruncateExisting_doesNotTruncateFile() throws
-    // IOException {
-    //    byte[] bytes = bytes(1, 2, 3, 4);
-    //    Files.write(path("/test"), bytes);
-    //
-    //    try (FileChannel channel = FileChannel.open(path("/test"), READ, TRUNCATE_EXISTING)) {
-    //      // TRUNCATE_EXISTING ignored when opening for read
-    //      byte[] readBytes = new byte[4];
-    //      channel.read(ByteBuffer.wrap(readBytes));
-    //
-    //      assertEquals(Bytes.asList(bytes), Bytes.asList(readBytes));
-    //    }
-    //  }
-    //
-    //  @Test
-    //  public void testRead_forFileAfterWriteLines_isLinesWritten() throws IOException {
-    //    Files.write(path("/test.txt"), ImmutableList.of("hello", "world"), UTF_8);
-    //
-    //    assertThatPath("/test.txt").containsLines("hello", "world");
-    //  }
-    //
-    //  @Test
-    //  public void testWriteLines_withStandardOptions() throws IOException {
-    //    Path test = path("/test.txt");
-    //    ImmutableList<String> lines = ImmutableList.of("hello", "world");
-    //
-    //    try {
-    //      // CREATE and CREATE_NEW not specified
-    //      Files.write(test, lines, UTF_8, WRITE);
-    //      fail();
-    //    } catch (NoSuchFileException expected) {
-    //      assertEquals(test.toString(), expected.getMessage());
-    //    }
-    //
-    //    Files.write(test, lines, UTF_8, CREATE_NEW); // succeeds, file does not exist
-    //    this.assertThatPath(test).containsLines(lines);
-    //
-    //    try {
-    //      Files.write(test, lines, UTF_8, CREATE_NEW); // CREATE_NEW requires file not exist
-    //      fail();
-    //    } catch (FileAlreadyExistsException expected) {
-    //    }
-    //
-    //    // succeeds, ok for file to already exist
-    //    Files.write(test, ImmutableList.of("foo"), UTF_8, CREATE);
-    //    // did not truncate or append, so overwrote
-    //    if (System.getProperty("line.separator").length() == 2) {
-    //      // on Windows, an extra character is overwritten by the \r\n line separator
-    //      this.assertThatPath(test).containsLines("foo", "", "world");
-    //    } else {
-    //      this.assertThatPath(test).containsLines("foo", "o", "world");
-    //    }
-    //
-    //    Files.write(test, lines, UTF_8, WRITE, CREATE, TRUNCATE_EXISTING); // default options
-    //    this.assertThatPath(test).containsLines(lines);
-    //
-    //    Files.write(test, lines, UTF_8, WRITE, APPEND);
-    //    this.assertThatPath(test).containsLines("hello", "world", "hello", "world");
-    //
-    //    Files.write(test, lines, UTF_8, WRITE, CREATE, TRUNCATE_EXISTING, APPEND, SPARSE, DSYNC,
-    // SYNC);
-    //    this.assertThatPath(test).containsLines(lines);
-    //
-    //    try {
-    //      Files.write(test, lines, UTF_8, READ, WRITE); // READ not allowed
-    //      fail();
-    //    } catch (UnsupportedOperationException expected) {
-    //    }
-    //  }
+
+      @Test
+      public void testCreateLink_absolute() throws IOException {
+        Files.createFile(path("/test.txt"));
+        Files.createLink(path("/link.txt"), path("/test.txt"));
+
+        // don't assert that the link is the same file here, just that it was created
+        // later tests check that linking works correctly
+        assertThatPath("/link.txt", NOFOLLOW_LINKS).isRegularFile();
+        assertThatPath("/").hasChildren("link.txt", "test.txt", "work");
+
+        Files.createDirectory(path("/foo"));
+        Files.createLink(path("/foo/link.txt"), path("/test.txt"));
+
+        assertThatPath("/foo/link.txt", NOFOLLOW_LINKS).isRegularFile();
+        assertThatPath("/foo").hasChildren("link.txt");
+      }
+
+      @Test
+      public void testCreateDirectory_relative() throws IOException {
+        Files.createDirectory(path("test"));
+
+        assertThatPath("/work/test", NOFOLLOW_LINKS).isDirectory();
+        assertThatPath("test", NOFOLLOW_LINKS).isDirectory();
+        assertThatPath("/work").hasChildren("test");
+        assertThatPath("test").isSameFileAs("/work/test");
+
+        Files.createDirectory(path("foo"));
+        Files.createDirectory(path("foo/bar"));
+
+        assertThatPath("/work/foo/bar", NOFOLLOW_LINKS).isDirectory();
+        assertThatPath("foo/bar", NOFOLLOW_LINKS).isDirectory();
+        assertThatPath("/work/foo").hasChildren("bar");
+        assertThatPath("foo").hasChildren("bar");
+        assertThatPath("foo/bar").isSameFileAs("/work/foo/bar");
+      }
+
+      @Test
+      public void testCreateFile_relative() throws IOException {
+        Files.createFile(path("test.txt"));
+
+        assertThatPath("/work/test.txt", NOFOLLOW_LINKS).isRegularFile();
+        assertThatPath("test.txt", NOFOLLOW_LINKS).isRegularFile();
+        assertThatPath("/work").hasChildren("test.txt");
+        assertThatPath("test.txt").isSameFileAs("/work/test.txt");
+
+        Files.createDirectory(path("foo"));
+        Files.createFile(path("foo/test.txt"));
+
+        assertThatPath("/work/foo/test.txt", NOFOLLOW_LINKS).isRegularFile();
+        assertThatPath("foo/test.txt", NOFOLLOW_LINKS).isRegularFile();
+        assertThatPath("/work/foo").hasChildren("test.txt");
+        assertThatPath("foo").hasChildren("test.txt");
+        assertThatPath("foo/test.txt").isSameFileAs("/work/foo/test.txt");
+      }
+
+      @Test
+      public void testCreateSymbolicLink_relative() throws IOException {
+        Files.createSymbolicLink(path("link.txt"), path("test.txt"));
+
+        assertThatPath("/work/link.txt", NOFOLLOW_LINKS).isSymbolicLink().withTarget("test.txt");
+        assertThatPath("link.txt", NOFOLLOW_LINKS).isSymbolicLink().withTarget("test.txt");
+        assertThatPath("/work").hasChildren("link.txt");
+
+        Files.createDirectory(path("foo"));
+        Files.createSymbolicLink(path("foo/link.txt"), path("test.txt"));
+
+        assertThatPath("/work/foo/link.txt", NOFOLLOW_LINKS).isSymbolicLink().withTarget("test.txt");
+        assertThatPath("foo/link.txt", NOFOLLOW_LINKS).isSymbolicLink().withTarget("test.txt");
+        assertThatPath("/work/foo").hasChildren("link.txt");
+        assertThatPath("foo").hasChildren("link.txt");
+      }
+
+      @Test
+      public void testCreateLink_relative() throws IOException {
+        Files.createFile(path("test.txt"));
+        Files.createLink(path("link.txt"), path("test.txt"));
+
+        // don't assert that the link is the same file here, just that it was created
+        // later tests check that linking works correctly
+        assertThatPath("/work/link.txt", NOFOLLOW_LINKS).isRegularFile();
+        assertThatPath("link.txt", NOFOLLOW_LINKS).isRegularFile();
+        assertThatPath("/work").hasChildren("link.txt", "test.txt");
+
+        Files.createDirectory(path("foo"));
+        Files.createLink(path("foo/link.txt"), path("test.txt"));
+
+        assertThatPath("/work/foo/link.txt", NOFOLLOW_LINKS).isRegularFile();
+        assertThatPath("foo/link.txt", NOFOLLOW_LINKS).isRegularFile();
+        assertThatPath("foo").hasChildren("link.txt");
+      }
+
+      @Test
+      public void testCreateFile_existing() throws IOException {
+        Files.createFile(path("/test"));
+        try {
+          Files.createFile(path("/test"));
+          fail();
+        } catch (FileAlreadyExistsException expected) {
+          assertEquals("/test", expected.getMessage());
+        }
+
+        try {
+          Files.createDirectory(path("/test"));
+          fail();
+        } catch (FileAlreadyExistsException expected) {
+          assertEquals("/test", expected.getMessage());
+        }
+
+        try {
+          Files.createSymbolicLink(path("/test"), path("/foo"));
+          fail();
+        } catch (FileAlreadyExistsException expected) {
+          assertEquals("/test", expected.getMessage());
+        }
+
+        Files.createFile(path("/foo"));
+        try {
+          Files.createLink(path("/test"), path("/foo"));
+          fail();
+        } catch (FileAlreadyExistsException expected) {
+          assertEquals("/test", expected.getMessage());
+        }
+      }
+
+      @Test
+      public void testCreateFile_parentDoesNotExist() throws IOException {
+        try {
+          Files.createFile(path("/foo/test"));
+          fail();
+        } catch (NoSuchFileException expected) {
+          assertEquals("/foo/test", expected.getMessage());
+        }
+
+        try {
+          Files.createDirectory(path("/foo/test"));
+          fail();
+        } catch (NoSuchFileException expected) {
+          assertEquals("/foo/test", expected.getMessage());
+        }
+
+        try {
+          Files.createSymbolicLink(path("/foo/test"), path("/bar"));
+          fail();
+        } catch (NoSuchFileException expected) {
+          assertEquals("/foo/test", expected.getMessage());
+        }
+
+        Files.createFile(path("/bar"));
+        try {
+          Files.createLink(path("/foo/test"), path("/bar"));
+          fail();
+        } catch (NoSuchFileException expected) {
+          assertEquals("/foo/test", expected.getMessage());
+        }
+      }
+
+      @Test
+      public void testCreateFile_parentIsNotDirectory() throws IOException {
+        Files.createDirectory(path("/foo"));
+        Files.createFile(path("/foo/bar"));
+
+        try {
+          Files.createFile(path("/foo/bar/baz"));
+          fail();
+        } catch (NoSuchFileException expected) {
+          assertEquals("/foo/bar/baz", expected.getFile());
+        }
+      }
+
+      @Test
+      public void testCreateFile_nonDirectoryHigherInPath() throws IOException {
+        Files.createDirectory(path("/foo"));
+        Files.createFile(path("/foo/bar"));
+
+        try {
+          Files.createFile(path("/foo/bar/baz/stuff"));
+          fail();
+        } catch (NoSuchFileException expected) {
+          assertEquals("/foo/bar/baz/stuff", expected.getFile());
+        }
+      }
+
+      @Test
+      public void testCreateFile_parentSymlinkDoesNotExist() throws IOException {
+        Files.createDirectory(path("/foo"));
+        Files.createSymbolicLink(path("/foo/bar"), path("/foo/nope"));
+
+        try {
+          Files.createFile(path("/foo/bar/baz"));
+          fail();
+        } catch (NoSuchFileException expected) {
+          assertEquals("/foo/bar/baz", expected.getFile());
+        }
+      }
+
+      @Test
+      public void testCreateFile_symlinkHigherInPathDoesNotExist() throws IOException {
+        Files.createDirectory(path("/foo"));
+        Files.createSymbolicLink(path("/foo/bar"), path("nope"));
+
+        try {
+          Files.createFile(path("/foo/bar/baz/stuff"));
+          fail();
+        } catch (NoSuchFileException expected) {
+          assertEquals("/foo/bar/baz/stuff", expected.getFile());
+        }
+      }
+
+      @Test
+      public void testCreateFile_parentSymlinkDoesPointsToNonDirectory() throws IOException {
+        Files.createDirectory(path("/foo"));
+        Files.createFile(path("/foo/file"));
+        Files.createSymbolicLink(path("/foo/bar"), path("/foo/file"));
+
+        try {
+          Files.createFile(path("/foo/bar/baz"));
+          fail();
+        } catch (NoSuchFileException expected) {
+          assertEquals("/foo/bar/baz", expected.getFile());
+        }
+      }
+
+      @Test
+      public void testCreateFile_symlinkHigherInPathPointsToNonDirectory() throws IOException {
+        Files.createDirectory(path("/foo"));
+        Files.createFile(path("/foo/file"));
+        Files.createSymbolicLink(path("/foo/bar"), path("file"));
+
+        try {
+          Files.createFile(path("/foo/bar/baz/stuff"));
+          fail();
+        } catch (NoSuchFileException expected) {
+          assertEquals("/foo/bar/baz/stuff", expected.getFile());
+        }
+      }
+
+      @Test
+      public void testCreateFile_withInitialAttributes() throws IOException {
+        Set<PosixFilePermission> permissions = PosixFilePermissions.fromString("rwxrwxrwx");
+        FileAttribute<?> permissionsAttr = PosixFilePermissions.asFileAttribute(permissions);
+
+        Files.createFile(path("/normal"));
+        Files.createFile(path("/foo"), permissionsAttr);
+
+        assertThatPath("/normal").attribute("posix:permissions").isNot(permissions);
+        assertThatPath("/foo").attribute("posix:permissions").is(permissions);
+      }
+
+      @Test
+      public void testCreateFile_withInitialAttributes_illegalInitialAttribute() throws
+     IOException {
+        try {
+          Files.createFile(
+              path("/foo"),
+              new BasicFileAttribute<>("basic:lastModifiedTime", FileTime.fromMillis(0L)));
+          fail();
+        } catch (UnsupportedOperationException expected) {
+        }
+
+        assertThatPath("/foo").doesNotExist();
+
+        try {
+          Files.createFile(path("/foo"), new BasicFileAttribute<>("basic:noSuchAttribute",
+     "foo"));
+          fail();
+        } catch (UnsupportedOperationException expected) {
+        }
+
+        assertThatPath("/foo").doesNotExist();
+      }
+
+      @Test
+      public void testOpenChannel_withInitialAttributes_createNewFile() throws IOException {
+        FileAttribute<Set<PosixFilePermission>> permissions =
+            PosixFilePermissions.asFileAttribute(PosixFilePermissions.fromString("rwxrwxrwx"));
+        Files.newByteChannel(path("/foo"), Set.of(WRITE, CREATE), permissions).close();
+
+        assertThatPath("/foo")
+            .isRegularFile()
+            .and()
+            .attribute("posix:permissions")
+            .is(permissions.value());
+      }
+
+      @Test
+      public void testOpenChannel_withInitialAttributes_fileExists() throws IOException {
+        Files.createFile(path("/foo"));
+
+        FileAttribute<Set<PosixFilePermission>> permissions =
+            PosixFilePermissions.asFileAttribute(PosixFilePermissions.fromString("rwxrwxrwx"));
+        Files.newByteChannel(path("/foo"), Set.of(WRITE, CREATE), permissions).close();
+
+        assertThatPath("/foo")
+            .isRegularFile()
+            .and()
+            .attribute("posix:permissions")
+            .isNot(permissions.value());
+      }
+
+      @Test
+      public void testCreateDirectory_withInitialAttributes() throws IOException {
+        FileAttribute<Set<PosixFilePermission>> permissions =
+            PosixFilePermissions.asFileAttribute(PosixFilePermissions.fromString("rwxrwxrwx"));
+
+        Files.createDirectory(path("/foo"), permissions);
+
+        assertThatPath("/foo")
+            .isDirectory()
+            .and()
+            .attribute("posix:permissions")
+            .is(permissions.value());
+
+        Files.createDirectory(path("/normal"));
+
+        assertThatPath("/normal")
+            .isDirectory()
+            .and()
+            .attribute("posix:permissions")
+            .isNot(permissions.value());
+      }
+
+      @Test
+      public void testCreateSymbolicLink_withInitialAttributes() throws IOException {
+        FileAttribute<Set<PosixFilePermission>> permissions =
+            PosixFilePermissions.asFileAttribute(PosixFilePermissions.fromString("rwxrwxrwx"));
+
+        Files.createSymbolicLink(path("/foo"), path("bar"), permissions);
+
+        assertThatPath("/foo", NOFOLLOW_LINKS)
+            .isSymbolicLink()
+            .and()
+            .attribute("posix:permissions")
+            .is(permissions.value());
+
+        Files.createSymbolicLink(path("/normal"), path("bar"));
+
+        assertThatPath("/normal", NOFOLLOW_LINKS)
+            .isSymbolicLink()
+            .and()
+            .attribute("posix:permissions")
+            .isNot(permissions.value());
+      }
+
+      @Test
+      public void testCreateDirectories() throws IOException {
+        Files.createDirectories(path("/foo/bar/baz"));
+
+        assertThatPath("/foo").isDirectory();
+        assertThatPath("/foo/bar").isDirectory();
+        assertThatPath("/foo/bar/baz").isDirectory();
+
+        Files.createDirectories(path("/foo/asdf/jkl"));
+
+        assertThatPath("/foo/asdf").isDirectory();
+        assertThatPath("/foo/asdf/jkl").isDirectory();
+
+        Files.createDirectories(path("bar/baz"));
+
+        assertThatPath("bar/baz").isDirectory();
+        assertThatPath("/work/bar/baz").isDirectory();
+      }
+
+      @Test
+      public void testDirectories_newlyCreatedDirectoryHasTwoLinks() throws IOException {
+        // one link from its parent to it; one from it to itself
+
+        Files.createDirectory(path("/foo"));
+
+        assertThatPath("/foo").hasLinkCount(2);
+      }
+
+      @Test
+      public void testDirectories_creatingDirectoryAddsOneLinkToParent() throws IOException {
+        // from the .. direntry
+
+        Files.createDirectory(path("/foo"));
+        Files.createDirectory(path("/foo/bar"));
+
+        assertThatPath("/foo").hasLinkCount(3);
+
+        Files.createDirectory(path("/foo/baz"));
+
+        assertThatPath("/foo").hasLinkCount(4);
+      }
+
+      @Test
+      public void testDirectories_creatingNonDirectoryDoesNotAddLinkToParent() throws IOException
+     {
+        Files.createDirectory(path("/foo"));
+        Files.createFile(path("/foo/file"));
+        Files.createSymbolicLink(path("/foo/fileSymlink"), path("file"));
+        Files.createLink(path("/foo/link"), path("/foo/file"));
+        Files.createSymbolicLink(path("/foo/fooSymlink"), path("/foo"));
+
+        assertThatPath("/foo").hasLinkCount(2);
+      }
+
+      @Test
+      public void testSize_forNewFile_isZero() throws IOException {
+        Files.createFile(path("/test"));
+
+        assertThatPath("/test").hasSize(0);
+      }
+
+      @Test
+      public void testRead_forNewFile_isEmpty() throws IOException {
+        Files.createFile(path("/test"));
+
+        assertThatPath("/test").containsNoBytes();
+      }
+
+      @Test
+      public void testWriteFile_succeeds() throws IOException {
+        Files.createFile(path("/test"));
+        Files.write(path("/test"), new byte[] {0, 1, 2, 3});
+      }
+
+      @Test
+      public void testSize_forFileAfterWrite_isNumberOfBytesWritten() throws IOException {
+        Files.write(path("/test"), new byte[] {0, 1, 2, 3});
+
+        assertThatPath("/test").hasSize(4);
+      }
+
+      @Test
+      public void testRead_forFileAfterWrite_isBytesWritten() throws IOException {
+        byte[] bytes = {0, 1, 2, 3};
+        Files.write(path("/test"), bytes);
+
+        assertThatPath("/test").containsBytes(bytes);
+      }
+
+      @Test
+      public void testWriteFile_withStandardOptions() throws IOException {
+        Path test = path("/test");
+        byte[] bytes = {0, 1, 2, 3};
+
+        try {
+          // CREATE and CREATE_NEW not specified
+          Files.write(test, bytes, WRITE);
+          fail();
+        } catch (NoSuchFileException expected) {
+          assertEquals(test.toString(), expected.getMessage());
+        }
+
+        Files.write(test, bytes, CREATE_NEW); // succeeds, file does not exist
+        assertThatPath("/test").containsBytes(bytes);
+
+        try {
+          Files.write(test, bytes, CREATE_NEW); // CREATE_NEW requires file not exist
+          fail();
+        } catch (FileAlreadyExistsException expected) {
+          assertEquals(test.toString(), expected.getMessage());
+        }
+
+        Files.write(test, new byte[] {4, 5}, CREATE); // succeeds, ok for file to already exist
+        assertThatPath("/test").containsBytes(4, 5, 2, 3); // did not truncate or append, so overwrote
+
+        Files.write(test, bytes, WRITE, CREATE, TRUNCATE_EXISTING); // default options
+        assertThatPath("/test").containsBytes(bytes);
+
+        Files.write(test, bytes, WRITE, APPEND);
+        assertThatPath("/test").containsBytes(0, 1, 2, 3, 0, 1, 2, 3);
+
+        Files.write(test, bytes, WRITE, CREATE, TRUNCATE_EXISTING, APPEND, SPARSE, DSYNC, SYNC);
+        assertThatPath("/test").containsBytes(bytes);
+
+        try {
+          Files.write(test, bytes, READ, WRITE); // READ not allowed
+          fail();
+        } catch (UnsupportedOperationException expected) {
+        }
+      }
+
+      @Test
+      public void testWriteLines_succeeds() throws IOException {
+        Files.write(path("/test.txt"), List.of("hello", "world"), UTF_8);
+      }
+
+      @Test
+      public void testOpenFile_withReadAndTruncateExisting_doesNotTruncateFile() throws IOException {
+        byte[] bytes = TestUtils.bytes(1, 2, 3, 4);
+        Files.write(path("/test"), bytes);
+
+        try (FileChannel channel = FileChannel.open(path("/test"), READ, TRUNCATE_EXISTING)) {
+          // TRUNCATE_EXISTING ignored when opening for read
+          byte[] readBytes = new byte[4];
+          channel.read(ByteBuffer.wrap(readBytes));
+
+          assertEquals(bytesAsList(bytes), bytesAsList(readBytes));
+        }
+      }
+
+      @Test
+      public void testRead_forFileAfterWriteLines_isLinesWritten() throws IOException {
+        Files.write(path("/test.txt"), List.of("hello", "world"), UTF_8);
+
+        assertThatPath("/test.txt").containsLines("hello", "world");
+      }
+
+      @Test
+      public void testWriteLines_withStandardOptions() throws IOException {
+        Path test = path("/test.txt");
+        List<String> lines = List.of("hello", "world");
+
+        try {
+          // CREATE and CREATE_NEW not specified
+          Files.write(test, lines, UTF_8, WRITE);
+          fail();
+        } catch (NoSuchFileException expected) {
+          assertEquals(test.toString(), expected.getMessage());
+        }
+
+        Files.write(test, lines, UTF_8, CREATE_NEW); // succeeds, file does not exist
+        this.assertThatPath(test).containsLines(lines);
+
+        try {
+          Files.write(test, lines, UTF_8, CREATE_NEW); // CREATE_NEW requires file not exist
+          fail();
+        } catch (FileAlreadyExistsException expected) {
+        }
+
+        // succeeds, ok for file to already exist
+        Files.write(test, List.of("foo"), UTF_8, CREATE);
+        // did not truncate or append, so overwrote
+        if (System.getProperty("line.separator").length() == 2) {
+          // on Windows, an extra character is overwritten by the \r\n line separator
+          this.assertThatPath(test).containsLines("foo", "", "world");
+        } else {
+          this.assertThatPath(test).containsLines("foo", "o", "world");
+        }
+
+        Files.write(test, lines, UTF_8, WRITE, CREATE, TRUNCATE_EXISTING); // default options
+        this.assertThatPath(test).containsLines(lines);
+
+        Files.write(test, lines, UTF_8, WRITE, APPEND);
+        this.assertThatPath(test).containsLines("hello", "world", "hello", "world");
+
+        Files.write(test, lines, UTF_8, WRITE, CREATE, TRUNCATE_EXISTING, APPEND, SPARSE, DSYNC,
+     SYNC);
+        this.assertThatPath(test).containsLines(lines);
+
+        try {
+          Files.write(test, lines, UTF_8, READ, WRITE); // READ not allowed
+          fail();
+        } catch (UnsupportedOperationException expected) {
+        }
+      }
     //
     //  @Test
     //  public void testWrite_fileExistsButIsNotRegularFile() throws IOException {

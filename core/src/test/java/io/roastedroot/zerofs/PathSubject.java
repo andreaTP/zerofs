@@ -3,6 +3,7 @@ package io.roastedroot.zerofs;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Arrays.asList;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 
 import java.io.IOException;
 import java.nio.charset.Charset;
@@ -363,7 +364,7 @@ public final class PathSubject {
             @Override
             public Attribute isNot(Object value) throws IOException {
                 Object actualValue = Files.getAttribute(actual, attribute, linkOptions);
-                assertEquals(value, actualValue);
+                assertNotEquals(value, actualValue);
                 return this;
             }
 

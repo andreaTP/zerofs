@@ -1,5 +1,6 @@
 package io.roastedroot.zerofs;
 
+import static io.roastedroot.zerofs.TestUtils.bytesAsList;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -40,14 +41,6 @@ public class RegularFileBlocksTest {
 
         // no bounds checking, but there should never be a block at an index >= size
         assertNull(file.getBlock(0));
-    }
-
-    public static List<Byte> bytesAsList(byte[] array) {
-        List<Byte> list = new ArrayList<>(array.length);
-        for (byte b : array) {
-            list.add(b); // auto-boxing
-        }
-        return list;
     }
 
     @Test
