@@ -10,7 +10,7 @@ import java.nio.file.Path;
 import org.junit.jupiter.api.Test;
 
 /**
- * Tests for {@link JimfsPath}.
+ * Tests for {@link ZeroFsPath}.
  *
  * @author Colin Decker
  */
@@ -327,14 +327,14 @@ public class ZeroFsPathTest {
         assertNotEquals(path3, path2);
     }
 
-    // TODO: do we really need to test null pointers?
+    // TODO: skip only null pointers
     //  @Test
     //  public void testNullPointerExceptions() throws NoSuchMethodException {
     //    NullPointerTester tester =
-    //        new NullPointerTester().ignore(JimfsPath.class.getMethod("toRealPath",
+    //        new NullPointerTester().ignore(ZeroFsPath.class.getMethod("toRealPath",
     // LinkOption[].class));
     //    // ignore toRealPath because the pathService creates fake paths that do not have a
-    //    // JimfsFileSystem instance, causing it to fail since it needs to access the file system
+    //    // ZeroFsFileSystem instance, causing it to fail since it needs to access the file system
     //
     //    tester.testAllPublicInstanceMethods(pathService.parsePath("/"));
     //    tester.testAllPublicInstanceMethods(pathService.parsePath(""));

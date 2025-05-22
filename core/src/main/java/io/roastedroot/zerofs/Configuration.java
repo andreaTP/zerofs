@@ -25,7 +25,7 @@ import java.util.regex.Pattern;
 
 /**
  * Immutable configuration for an in-memory file system. A {@code Configuration} is passed to a
- * method in {@link Jimfs} such as {@link Jimfs#newFileSystem(Configuration)} to create a new {@link
+ * method in {@link ZeroFs} such as {@link ZeroFs#newFileSystem(Configuration)} to create a new {@link
  * FileSystem} instance.
  *
  * @author Colin Decker
@@ -176,7 +176,7 @@ public final class Configuration {
      * returned; if the operating system is Mac OS X, {@link Configuration#osX()} is returned;
      * otherwise, {@link Configuration#unix()} is returned.
      *
-     * <p>This is the configuration used by the {@code Jimfs.newFileSystem} methods that do not take a
+     * <p>This is the configuration used by the {@code ZeroFs.newFileSystem} methods that do not take a
      * {@code Configuration} parameter.
      *
      * @since 1.1

@@ -4,7 +4,7 @@ import java.nio.file.attribute.FileTime;
 import java.util.Objects;
 
 /**
- * A symbolic link file, containing a {@linkplain JimfsPath path}.
+ * A symbolic link file, containing a {@linkplain ZeroFsPath path}.
  *
  * @author Colin Decker
  */

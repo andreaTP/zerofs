@@ -29,7 +29,7 @@ import java.util.concurrent.Future;
 import org.junit.jupiter.api.Test;
 
 /**
- * Tests for {@link JimfsAsynchronousFileChannel}.
+ * Tests for {@link ZeroFsAsynchronousFileChannel}.
  *
  * @author Colin Decker
  */
@@ -73,102 +73,102 @@ public class ZeroFsAsynchronousFileChannelTest {
         }
     }
 
-    //  @Test
-    //  public void testClosedChannel() throws Throwable {
-    //    RegularFile file = regularFile(15);
-    //    ExecutorService executor = Executors.newSingleThreadExecutor();
-    //
-    //    try {
-    //      JimfsAsynchronousFileChannel channel = channel(file, executor, READ, WRITE);
-    //      channel.close();
-    //
-    //      assertClosed(channel.read(ByteBuffer.allocate(10), 0));
-    //      assertClosed(channel.write(ByteBuffer.allocate(10), 15));
-    //      assertClosed(channel.lock());
-    //      assertClosed(channel.lock(0, 10, true));
-    //    } finally {
-    //      executor.shutdown();
-    //    }
-    //  }
-    //
-    //  @Test
-    //  public void testAsyncClose_write() throws Throwable {
-    //    RegularFile file = regularFile(15);
-    //    ExecutorService executor = Executors.newFixedThreadPool(4);
-    //
-    //    try {
-    //      JimfsAsynchronousFileChannel channel = channel(file, executor, READ, WRITE);
-    //
-    //      file.writeLock().lock(); // cause another thread trying to write to block
-    //
-    //      // future-returning write
-    //      Future<Integer> future = channel.write(ByteBuffer.allocate(10), 0);
-    //
-    //      // completion handler write
-    //      SettableFuture<Integer> completionHandlerFuture = SettableFuture.create();
-    //      channel.write(ByteBuffer.allocate(10), 0, null, setFuture(completionHandlerFuture));
-    //
-    //      // Despite this 10ms sleep to allow plenty of time, it's possible, though very rare, for
-    // a
-    //      // race to cause the channel to be closed before the asynchronous calls get to the
-    // initial
-    //      // check that the channel is open, causing ClosedChannelException to be thrown rather
-    // than
-    //      // AsynchronousCloseException. This is not a problem in practice, just a quirk of how
-    // these
-    //      // tests work and that we don't have a way of waiting for the operations to get past
-    // that
-    //      // check.
-    //      Uninterruptibles.sleepUninterruptibly(10, MILLISECONDS);
-    //
-    //      channel.close();
-    //
-    //      assertAsynchronousClose(future);
-    //      assertAsynchronousClose(completionHandlerFuture);
-    //    } finally {
-    //      executor.shutdown();
-    //    }
-    //  }
-    //
-    //  @Test
-    //  public void testAsyncClose_read() throws Throwable {
-    //    RegularFile file = regularFile(15);
-    //    ExecutorService executor = Executors.newFixedThreadPool(2);
-    //
-    //    try {
-    //      JimfsAsynchronousFileChannel channel = channel(file, executor, READ, WRITE);
-    //
-    //      file.writeLock().lock(); // cause another thread trying to read to block
-    //
-    //      // future-returning read
-    //      Future<Integer> future = channel.read(ByteBuffer.allocate(10), 0);
-    //
-    //      // completion handler read
-    //      SettableFuture<Integer> completionHandlerFuture = SettableFuture.create();
-    //      channel.read(ByteBuffer.allocate(10), 0, null, setFuture(completionHandlerFuture));
-    //
-    //      // Despite this 10ms sleep to allow plenty of time, it's possible, though very rare, for
-    // a
-    //      // race to cause the channel to be closed before the asynchronous calls get to the
-    // initial
-    //      // check that the channel is open, causing ClosedChannelException to be thrown rather
-    // than
-    //      // AsynchronousCloseException. This is not a problem in practice, just a quirk of how
-    // these
-    //      // tests work and that we don't have a way of waiting for the operations to get past
-    // that
-    //      // check.
-    //      Uninterruptibles.sleepUninterruptibly(10, MILLISECONDS);
-    //
-    //      channel.close();
-    //
-    //      assertAsynchronousClose(future);
-    //      assertAsynchronousClose(completionHandlerFuture);
-    //    } finally {
-    //      executor.shutdown();
-    //    }
-    //  }
-    //
+    @Test
+    public void testClosedChannel() throws Throwable {
+        RegularFile file = regularFile(15);
+        ExecutorService executor = Executors.newSingleThreadExecutor();
+
+        try {
+            ZeroFsAsynchronousFileChannel channel = channel(file, executor, READ, WRITE);
+            channel.close();
+
+            assertClosed(channel.read(ByteBuffer.allocate(10), 0));
+            assertClosed(channel.write(ByteBuffer.allocate(10), 15));
+            assertClosed(channel.lock());
+            assertClosed(channel.lock(0, 10, true));
+        } finally {
+            executor.shutdown();
+        }
+    }
+
+    @Test
+    public void testAsyncClose_write() throws Throwable {
+        RegularFile file = regularFile(15);
+        ExecutorService executor = Executors.newFixedThreadPool(4);
+
+        try {
+            ZeroFsAsynchronousFileChannel channel = channel(file, executor, READ, WRITE);
+
+            file.writeLock().lock(); // cause another thread trying to write to block
+
+            // future-returning write
+            Future<Integer> future = channel.write(ByteBuffer.allocate(10), 0);
+
+            // completion handler write
+            CompletableFuture<Integer> completionHandlerFuture = new CompletableFuture<>();
+            channel.write(ByteBuffer.allocate(10), 0, null, setFuture(completionHandlerFuture));
+
+            // Despite this 10ms sleep to allow plenty of time, it's possible, though very rare, for
+            // a
+            // race to cause the channel to be closed before the asynchronous calls get to the
+            // initial
+            // check that the channel is open, causing ClosedChannelException to be thrown rather
+            // than
+            // AsynchronousCloseException. This is not a problem in practice, just a quirk of how
+            // these
+            // tests work and that we don't have a way of waiting for the operations to get past
+            // that
+            // check.
+            Thread.sleep(10);
+
+            channel.close();
+
+            assertAsynchronousClose(future);
+            assertAsynchronousClose(completionHandlerFuture);
+        } finally {
+            executor.shutdown();
+        }
+    }
+
+    @Test
+    public void testAsyncClose_read() throws Throwable {
+        RegularFile file = regularFile(15);
+        ExecutorService executor = Executors.newFixedThreadPool(2);
+
+        try {
+            ZeroFsAsynchronousFileChannel channel = channel(file, executor, READ, WRITE);
+
+            file.writeLock().lock(); // cause another thread trying to read to block
+
+            // future-returning read
+            Future<Integer> future = channel.read(ByteBuffer.allocate(10), 0);
+
+            // completion handler read
+            CompletableFuture<Integer> completionHandlerFuture = new CompletableFuture();
+            channel.read(ByteBuffer.allocate(10), 0, null, setFuture(completionHandlerFuture));
+
+            // Despite this 10ms sleep to allow plenty of time, it's possible, though very rare, for
+            // a
+            // race to cause the channel to be closed before the asynchronous calls get to the
+            // initial
+            // check that the channel is open, causing ClosedChannelException to be thrown rather
+            // than
+            // AsynchronousCloseException. This is not a problem in practice, just a quirk of how
+            // these
+            // tests work and that we don't have a way of waiting for the operations to get past
+            // that
+            // check.
+            Thread.sleep(10);
+
+            channel.close();
+
+            assertAsynchronousClose(future);
+            assertAsynchronousClose(completionHandlerFuture);
+        } finally {
+            executor.shutdown();
+        }
+    }
+
     private static void checkAsyncRead(AsynchronousFileChannel channel) throws Throwable {
         ByteBuffer buf = buffer("1234567890");
         assertEquals(10, (int) channel.read(buf, 0).get());

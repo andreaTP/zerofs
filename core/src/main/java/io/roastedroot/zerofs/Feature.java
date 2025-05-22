@@ -1,7 +1,7 @@
 package io.roastedroot.zerofs;
 
 /**
- * Optional file system features that may be supported or unsupported by a Jimfs file system
+ * Optional file system features that may be supported or unsupported by a ZeroFs file system
  * instance.
  *
  * @author Colin Decker

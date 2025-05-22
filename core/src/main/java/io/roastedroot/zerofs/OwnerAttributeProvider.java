@@ -63,7 +63,7 @@ final class OwnerAttributeProvider extends AttributeProvider {
             UserPrincipal user = checkType(view, attribute, value, UserPrincipal.class);
             // TODO(cgdecker): Do we really need to do this? Any reason not to allow any
             // UserPrincipal?
-            if (!(user instanceof UserLookupService.JimfsUserPrincipal)) {
+            if (!(user instanceof UserLookupService.ZeroFsUserPrincipal)) {
                 user = createUserPrincipal(user.getName());
             }
             file.setAttribute("owner", "owner", user);

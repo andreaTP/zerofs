@@ -42,7 +42,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.Test;
 
 /**
- * Most of the behavior of {@link JimfsFileChannel} is handled by the {@link RegularFile}
+ * Most of the behavior of {@link ZeroFsFileChannel} is handled by the {@link RegularFile}
  * implementations, so the thorough tests of that are in {@link RegularFileTest}. This mostly tests
  * interactions with the file and channel positions.
  *
@@ -627,12 +627,11 @@ public class ZeroFsFileChannelTest {
         }
     }
 
-    //  TODO: implement me!
+    //  TODO: skip only null checks
     //  @Test
     //  public void testNullPointerExceptions() throws IOException {
     //    FileChannel channel = channel(regularFile(100), READ, WRITE);
     //
-    ////    TODO: implement an equivalent functionality
     ////    NullPointerTester tester = new NullPointerTester();
     ////    tester.testAllPublicInstanceMethods(channel);
     //  }
@@ -921,7 +920,7 @@ public class ZeroFsFileChannelTest {
 
     /**
      * Tests that the methods on the default FileChannel that support InterruptibleChannel behavior
-     * also support it on JimfsFileChannel, by just interrupting the thread before calling the method.
+     * also support it on ZeroFsFileChannel, by just interrupting the thread before calling the method.
      */
     @Test
     public void testInterruptedThreads() throws IOException {

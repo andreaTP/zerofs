@@ -54,7 +54,7 @@ final class PollingWatchService extends AbstractWatchService {
      * running if the user doesn't close the watch service or the file system.
      */
     private static final ThreadFactory THREAD_FACTORY =
-            new ZeroFsThreadFactory("com.google.common.jimfs.PollingWatchService-thread-%d", true);
+            new ZeroFsThreadFactory("io.roastedroot.zerofs.PollingWatchService-thread-%d", true);
 
     private final ScheduledExecutorService pollingService =
             Executors.newSingleThreadScheduledExecutor(THREAD_FACTORY);

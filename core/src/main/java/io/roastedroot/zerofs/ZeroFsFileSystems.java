@@ -32,7 +32,7 @@ final class ZeroFsFileSystems {
             return DO_NOTHING;
         }
 
-        // We have to invoke the SystemJimfsFileSystemProvider.removeFileSystemRunnable(URI)
+        // We have to invoke the SystemZeroFsFileSystemProvider.removeFileSystemRunnable(URI)
         // method reflectively since the system-loaded instance of it may be a different class
         // than the one we'd get if we tried to cast it and call it like normal here.
         try {

@@ -12,7 +12,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 
 /**
- * {@link AsynchronousFileChannel} implementation that delegates to a {@link JimfsFileChannel}.
+ * {@link AsynchronousFileChannel} implementation that delegates to a {@link ZeroFsFileChannel}.
  *
  * @author Colin Decker
  */

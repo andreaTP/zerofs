@@ -35,12 +35,12 @@ final class UserLookupService extends UserPrincipalLookupService {
 
     /** Creates a {@link UserPrincipal} for the given user name. */
     static UserPrincipal createUserPrincipal(String name) {
-        return new JimfsUserPrincipal(name);
+        return new ZeroFsUserPrincipal(name);
     }
 
     /** Creates a {@link GroupPrincipal} for the given group name. */
     static GroupPrincipal createGroupPrincipal(String name) {
-        return new JimfsGroupPrincipal(name);
+        return new ZeroFsGroupPrincipal(name);
     }
 
     /** Base class for {@link UserPrincipal} and {@link GroupPrincipal} implementations. */
@@ -69,30 +69,30 @@ final class UserLookupService extends UserPrincipalLookupService {
     }
 
     /** {@link UserPrincipal} implementation. */
-    static final class JimfsUserPrincipal extends NamedPrincipal {
+    static final class ZeroFsUserPrincipal extends NamedPrincipal {
 
-        private JimfsUserPrincipal(String name) {
+        private ZeroFsUserPrincipal(String name) {
             super(name);
         }
 
         @Override
         public boolean equals(Object obj) {
-            return obj instanceof JimfsUserPrincipal
-                    && getName().equals(((JimfsUserPrincipal) obj).getName());
+            return obj instanceof ZeroFsUserPrincipal
+                    && getName().equals(((ZeroFsUserPrincipal) obj).getName());
         }
     }
 
     /** {@link GroupPrincipal} implementation. */
-    static final class JimfsGroupPrincipal extends NamedPrincipal implements GroupPrincipal {
+    static final class ZeroFsGroupPrincipal extends NamedPrincipal implements GroupPrincipal {
 
-        private JimfsGroupPrincipal(String name) {
+        private ZeroFsGroupPrincipal(String name) {
             super(name);
         }
 
         @Override
         public boolean equals(Object obj) {
-            return obj instanceof JimfsGroupPrincipal
-                    && ((JimfsGroupPrincipal) obj).name.equals(name);
+            return obj instanceof ZeroFsGroupPrincipal
+                    && ((ZeroFsGroupPrincipal) obj).name.equals(name);
         }
     }
 }

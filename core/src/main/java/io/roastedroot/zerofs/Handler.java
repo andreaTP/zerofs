@@ -7,7 +7,7 @@ import java.net.URLConnection;
 import java.net.URLStreamHandler;
 
 /**
- * {@link URLStreamHandler} implementation for jimfs. Named {@code Handler} so that the class can be
+ * {@link URLStreamHandler} implementation for zerofs. Named {@code Handler} so that the class can be
  * found by Java as described in the documentation for {@link URL#URL(String, String, int, String)
  * URL}.
  *
@@ -23,7 +23,7 @@ public final class Handler extends URLStreamHandler {
 
     /**
      * Registers this handler by adding the package {@code com.google.common} to the system property
-     * {@code "java.protocol.handler.pkgs"}. Java will then look for this class in the {@code jimfs}
+     * {@code "java.protocol.handler.pkgs"}. Java will then look for this class in the {@code zerofs}
      * (the name of the protocol) package of {@code com.google.common}.
      *
      * @throws SecurityException if the system property that needs to be set to register this handler
@@ -70,7 +70,7 @@ public final class Handler extends URLStreamHandler {
     @SuppressWarnings(
             "UnsynchronizedOverridesSynchronized") // no need to synchronize to return null
     protected InetAddress getHostAddress(URL url) {
-        // jimfs uses the URI host to specify the name of the file system being used.
+        // zerofs uses the URI host to specify the name of the file system being used.
         // In the default implementation of getHostAddress(URL), a non-null host would cause an
         // attempt
         // to look up the IP address, causing a slowdown on calling equals/hashCode methods on the

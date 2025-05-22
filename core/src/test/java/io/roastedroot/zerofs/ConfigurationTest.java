@@ -4,8 +4,12 @@ import static io.roastedroot.zerofs.PathNormalization.CASE_FOLD_ASCII;
 import static io.roastedroot.zerofs.PathNormalization.CASE_FOLD_UNICODE;
 import static io.roastedroot.zerofs.PathNormalization.NFC;
 import static io.roastedroot.zerofs.PathNormalization.NFD;
+import static io.roastedroot.zerofs.WatchServiceConfiguration.polling;
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
+import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
@@ -15,6 +19,7 @@ import java.nio.file.FileStore;
 import java.nio.file.FileSystem;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.WatchService;
 import java.nio.file.attribute.PosixFilePermissions;
 import java.util.Iterator;
 import java.util.Set;
@@ -27,10 +32,6 @@ import org.junit.jupiter.api.Test;
  * @author Colin Decker
  */
 public class ConfigurationTest {
-
-    //  private static PathSubject assertThatPath(Path path) {
-    //    return assert_().about(paths()).that(path);
-    //  }
 
     @Test
     public void testDefaultUnixConfiguration() {
@@ -359,31 +360,31 @@ public class ConfigurationTest {
         }
     }
 
-    //  @Test
-    //  public void testFileSystemWithDefaultWatchService() throws IOException {
-    //    FileSystem fs = Jimfs.newFileSystem(Configuration.unix());
-    //
-    //    WatchService watchService = fs.newWatchService();
-    //    assertThat(watchService).isInstanceOf(PollingWatchService.class);
-    //
-    //    PollingWatchService pollingWatchService = (PollingWatchService) watchService;
-    //    assertThat(pollingWatchService.interval).isEqualTo(5);
-    //    assertThat(pollingWatchService.timeUnit).isEqualTo(SECONDS);
-    //  }
+    @Test
+    public void testFileSystemWithDefaultWatchService() throws IOException {
+        FileSystem fs = ZeroFs.newFileSystem(Configuration.unix());
 
-    //  @Test
-    //  public void testFileSystemWithCustomWatchServicePollingInterval() throws IOException {
-    //    FileSystem fs =
-    //        Jimfs.newFileSystem(
-    //            Configuration.unix().toBuilder()
-    //                .setWatchServiceConfiguration(polling(10, MILLISECONDS))
-    //                .build());
-    //
-    //    WatchService watchService = fs.newWatchService();
-    //    assertThat(watchService).isInstanceOf(PollingWatchService.class);
-    //
-    //    PollingWatchService pollingWatchService = (PollingWatchService) watchService;
-    //    assertThat(pollingWatchService.interval).isEqualTo(10);
-    //    assertThat(pollingWatchService.timeUnit).isEqualTo(MILLISECONDS);
-    //  }
+        WatchService watchService = fs.newWatchService();
+        assertInstanceOf(PollingWatchService.class, watchService);
+
+        PollingWatchService pollingWatchService = (PollingWatchService) watchService;
+        assertEquals(5, pollingWatchService.interval);
+        assertEquals(SECONDS, pollingWatchService.timeUnit);
+    }
+
+    @Test
+    public void testFileSystemWithCustomWatchServicePollingInterval() throws IOException {
+        FileSystem fs =
+                ZeroFs.newFileSystem(
+                        Configuration.unix().toBuilder()
+                                .setWatchServiceConfiguration(polling(10, MILLISECONDS))
+                                .build());
+
+        WatchService watchService = fs.newWatchService();
+        assertInstanceOf(PollingWatchService.class, watchService);
+
+        PollingWatchService pollingWatchService = (PollingWatchService) watchService;
+        assertEquals(10, pollingWatchService.interval);
+        assertEquals(MILLISECONDS, pollingWatchService.timeUnit);
+    }
 }

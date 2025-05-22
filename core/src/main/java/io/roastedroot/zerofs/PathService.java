@@ -17,7 +17,7 @@ import java.util.TreeSet;
 import java.util.function.Predicate;
 
 /**
- * Service for creating {@link JimfsPath} instances and handling other path-related operations.
+ * Service for creating {@link ZeroFsPath} instances and handling other path-related operations.
  *
  * @author Colin Decker
  */
@@ -80,7 +80,7 @@ final class PathService implements Comparator<ZeroFsPath> {
 
     /** Sets the file system to use for created paths. */
     public void setFileSystem(FileSystem fileSystem) {
-        // allowed to not be JimfsFileSystem for testing purposes only
+        // allowed to not be ZeroFsFileSystem for testing purposes only
         if (this.fileSystem != null) {
             new IllegalStateException("may not set fileSystem twice");
         }
@@ -214,7 +214,7 @@ final class PathService implements Comparator<ZeroFsPath> {
 
     /** Creates a hash code for the given path. */
     public int hash(ZeroFsPath path) {
-        // Note: JimfsPath.equals() is implemented using the compare() method below;
+        // Note: ZeroFsPath.equals() is implemented using the compare() method below;
         // equalityUsesCanonicalForm is taken into account there via the namesComparator, which is
         // set
         // at construction time.

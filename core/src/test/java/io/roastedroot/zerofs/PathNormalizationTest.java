@@ -49,7 +49,7 @@ public class PathNormalizationTest {
         {"Ὰͅ", "ὰι", "ᾲ", "Ὰͅ", "ᾺΙ"}
     };
 
-    // TODO: we don't want the heavy library for this ...
+    // TODO: skip to avoid an heavy library dependency
     // let see if we should make it optional somehow
     //  @Test
     //  public void testCaseFold() {

@@ -72,9 +72,7 @@ final class ZeroFsFileChannel extends FileChannel {
      * asynchronous operations.
      */
     public AsynchronousFileChannel asAsynchronousFileChannel(ExecutorService executor) {
-        // TODO: implement me
-        // return new ZeroFsAsynchronousFileChannel(this, executor);
-        throw new IllegalArgumentException("Implement me!");
+        return new ZeroFsAsynchronousFileChannel(this, executor);
     }
 
     void checkReadable() {

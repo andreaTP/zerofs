@@ -4,7 +4,7 @@ import java.util.Map;
 
 /**
  * Static registry of {@link AttributeProvider} implementations for the standard set of file
- * attribute views Jimfs supports.
+ * attribute views ZeroFs supports.
  *
  * @author Colin Decker
  */

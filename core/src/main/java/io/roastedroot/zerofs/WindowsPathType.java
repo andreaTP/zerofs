@@ -46,7 +46,7 @@ final class WindowsPathType extends PathType {
         if (WORKING_DIR_WITH_DRIVE.matcher(path).matches()) {
             throw new InvalidPathException(
                     original,
-                    "Jimfs does not currently support the Windows syntax for a relative path "
+                    "ZeroFs does not currently support the Windows syntax for a relative path "
                             + "on a specific drive (e.g. \"C:foo\\bar\")");
         }
 
@@ -56,7 +56,7 @@ final class WindowsPathType extends PathType {
         } else if (path.startsWith("\\")) {
             throw new InvalidPathException(
                     original,
-                    "Jimfs does not currently support the Windows syntax for an absolute path "
+                    "ZeroFs does not currently support the Windows syntax for an absolute path "
                             + "on the current drive (e.g. \"\\foo\\bar\")");
         } else {
             root = parseDriveRoot(path);

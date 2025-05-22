@@ -113,7 +113,7 @@ final class PosixAttributeProvider extends AttributeProvider {
                 checkNotCreate(view, attribute, create);
 
                 GroupPrincipal group = checkType(view, attribute, value, GroupPrincipal.class);
-                if (!(group instanceof UserLookupService.JimfsGroupPrincipal)) {
+                if (!(group instanceof UserLookupService.ZeroFsGroupPrincipal)) {
                     group = createGroupPrincipal(group.getName());
                 }
                 file.setAttribute("posix", "group", group);
