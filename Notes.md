@@ -1,4 +1,8 @@
 
-- review all the usages of `GuardedBy`
+- review all usages of `GuardedBy`
 - `testNullPointerExceptions` in ZeroFsFileChannelTest - another null pointers test somewhere
-- notable missing: pollService and asyncFileChannel
+- notable missing: asyncFileChannel
+- better rewrite the readme
+- contact jimfs repo
+- review warnings of Maven
+- publish

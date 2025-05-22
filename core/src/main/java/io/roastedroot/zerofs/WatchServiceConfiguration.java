@@ -51,9 +51,7 @@ public abstract class WatchServiceConfiguration {
 
         @Override
         AbstractWatchService newWatchService(FileSystemView view, PathService pathService) {
-            // TODO: implement me
-            // return new PollingWatchService(view, pathService, view.state(), interval, timeUnit);
-            throw new IllegalArgumentException("TODO: implement me");
+            return new PollingWatchService(view, pathService, view.state(), interval, timeUnit);
         }
 
         @Override
