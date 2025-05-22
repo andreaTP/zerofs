@@ -48,6 +48,7 @@ import java.nio.file.FileSystemException;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
+import java.nio.file.NotDirectoryException;
 import java.nio.file.NotLinkException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -59,6 +60,7 @@ import java.nio.file.attribute.FileTime;
 import java.nio.file.attribute.PosixFilePermission;
 import java.nio.file.attribute.PosixFilePermissions;
 import java.nio.file.attribute.UserPrincipal;
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
@@ -1977,132 +1979,128 @@ public class ZeroFsUnixLikeFileSystemTest extends AbstractZeroFsIntegrationTest 
         assertThatPath("/foo/bar/link1/foo/bar/link1/foo").isSameFileAs("/foo");
       }
 
-//      @Test
-//      public void testSecureDirectoryStream() throws IOException {
-//        Files.createDirectories(path("/foo/bar"));
-//        Files.createFile(path("/foo/a"));
-//        Files.createFile(path("/foo/b"));
-//        Files.createSymbolicLink(path("/foo/barLink"), path("bar"));
-//
-//        try (DirectoryStream<Path> stream = Files.newDirectoryStream(path("/foo"))) {
-//          if (!(stream instanceof SecureDirectoryStream)) {
-//            fail("should be a secure directory stream");
-//          }
-//
-//          SecureDirectoryStream<Path> secureStream = (SecureDirectoryStream<Path>) stream;
-//
-//          assertEquals(ImmutableList.copyOf(secureStream))
-//              .isEqualTo(
-//                  ImmutableList.of(
-//                      path("/foo/a"), path("/foo/b"), path("/foo/bar"), path("/foo/barLink")));
-//
-//          secureStream.deleteFile(path("b"));
-//          assertThatPath("/foo/b").doesNotExist();
-//
-//          secureStream.newByteChannel(path("b"), ImmutableSet.of(WRITE, CREATE_NEW)).close();
-//          assertThatPath("/foo/b").isRegularFile();
-//
-//          assertThatPath("/foo").hasChildren("a", "b", "bar", "barLink");
-//
-//          Files.createDirectory(path("/baz"));
-//          Files.move(path("/foo"), path("/baz/stuff"));
-//
-//          this.assertThatPath(path("/foo")).doesNotExist();
-//
-//          assertThatPath("/baz/stuff").hasChildren("a", "b", "bar", "barLink");
-//
-//          secureStream.deleteFile(path("b"));
-//
-//          assertThatPath("/baz/stuff/b").doesNotExist();
-//          assertThatPath("/baz/stuff").hasChildren("a", "bar", "barLink");
-//
-//          assertEquals(
-//                  secureStream
-//                      .getFileAttributeView(BasicFileAttributeView.class)
-//                      .readAttributes()
-//                      .isDirectory())
-//              .isTrue();
-//
-//          assertEquals(
-//                  secureStream
-//                      .getFileAttributeView(path("a"), BasicFileAttributeView.class)
-//                      .readAttributes()
-//                      .isRegularFile())
-//              .isTrue();
-//
-//          try {
-//            secureStream.deleteFile(path("bar"));
-//            fail();
-//          } catch (FileSystemException expected) {
-//            assertEquals("bar", expected.getFile());
-//          }
-//
-//          try {
-//            secureStream.deleteDirectory(path("a"));
-//            fail();
-//          } catch (FileSystemException expected) {
-//            assertEquals("a", expected.getFile());
-//          }
-//
-//          try (SecureDirectoryStream<Path> barStream =
-//     secureStream.newDirectoryStream(path("bar"))) {
-//            barStream.newByteChannel(path("stuff"), ImmutableSet.of(WRITE, CREATE_NEW)).close();
-//            assertEquals(
-//                    barStream
-//                        .getFileAttributeView(path("stuff"), BasicFileAttributeView.class)
-//                        .readAttributes()
-//                        .isRegularFile())
-//                .isTrue();
-//
-//            assertEquals(
-//                    secureStream
-//                        .getFileAttributeView(path("bar/stuff"), BasicFileAttributeView.class)
-//                        .readAttributes()
-//                        .isRegularFile())
-//                .isTrue();
-//          }
-//
-//          try (SecureDirectoryStream<Path> barLinkStream =
-//              secureStream.newDirectoryStream(path("barLink"))) {
-//            assertEquals(
-//                    barLinkStream
-//                        .getFileAttributeView(path("stuff"), BasicFileAttributeView.class)
-//                        .readAttributes()
-//                        .isRegularFile())
-//                .isTrue();
-//
-//            assertEquals(
-//                    barLinkStream
-//                        .getFileAttributeView(path(".."), BasicFileAttributeView.class)
-//                        .readAttributes()
-//                        .isDirectory())
-//                .isTrue();
-//          }
-//
-//          try {
-//            secureStream.newDirectoryStream(path("barLink"), NOFOLLOW_LINKS);
-//            fail();
-//          } catch (NotDirectoryException expected) {
-//            assertEquals("barLink", expected.getFile());
-//          }
-//
-//          try (SecureDirectoryStream<Path> barStream =
-//     secureStream.newDirectoryStream(path("bar"))) {
-//            secureStream.move(path("a"), barStream, path("moved"));
-//
-//            this.assertThatPath(path("/baz/stuff/a")).doesNotExist();
-//            this.assertThatPath(path("/baz/stuff/bar/moved")).isRegularFile();
-//
-//            assertEquals(
-//                    barStream
-//                        .getFileAttributeView(path("moved"), BasicFileAttributeView.class)
-//                        .readAttributes()
-//                        .isRegularFile())
-//                .isTrue();
-//          }
-//        }
-//      }
-//
+      @Test
+      public void testSecureDirectoryStream() throws IOException {
+        Files.createDirectories(path("/foo/bar"));
+        Files.createFile(path("/foo/a"));
+        Files.createFile(path("/foo/b"));
+        Files.createSymbolicLink(path("/foo/barLink"), path("bar"));
+
+        try (DirectoryStream<Path> stream = Files.newDirectoryStream(path("/foo"))) {
+          if (!(stream instanceof SecureDirectoryStream)) {
+            fail("should be a secure directory stream");
+          }
+
+          SecureDirectoryStream<Path> secureStream = (SecureDirectoryStream<Path>) stream;
+          Iterator<Path> secureStreamIter = secureStream.iterator();
+          List<Path> secureStreamList = new ArrayList<>();
+          while (secureStreamIter.hasNext()) {
+              secureStreamList.add(secureStreamIter.next());
+          }
+
+          assertEquals(List.of(
+                  path("/foo/a"), path("/foo/b"), path("/foo/bar"), path("/foo/barLink")), secureStreamList);
+
+          secureStream.deleteFile(path("b"));
+          assertThatPath("/foo/b").doesNotExist();
+
+          secureStream.newByteChannel(path("b"), Set.of(WRITE, CREATE_NEW)).close();
+          assertThatPath("/foo/b").isRegularFile();
+
+          assertThatPath("/foo").hasChildren("a", "b", "bar", "barLink");
+
+          Files.createDirectory(path("/baz"));
+          Files.move(path("/foo"), path("/baz/stuff"));
+
+          this.assertThatPath(path("/foo")).doesNotExist();
+
+          assertThatPath("/baz/stuff").hasChildren("a", "b", "bar", "barLink");
+
+          secureStream.deleteFile(path("b"));
+
+          assertThatPath("/baz/stuff/b").doesNotExist();
+          assertThatPath("/baz/stuff").hasChildren("a", "bar", "barLink");
+
+          assertTrue(
+                  secureStream
+                      .getFileAttributeView(BasicFileAttributeView.class)
+                      .readAttributes()
+                      .isDirectory());
+
+          assertTrue(
+                  secureStream
+                      .getFileAttributeView(path("a"), BasicFileAttributeView.class)
+                      .readAttributes()
+                      .isRegularFile());
+
+          try {
+            secureStream.deleteFile(path("bar"));
+            fail();
+          } catch (FileSystemException expected) {
+            assertEquals("bar", expected.getFile());
+          }
+
+          try {
+            secureStream.deleteDirectory(path("a"));
+            fail();
+          } catch (FileSystemException expected) {
+            assertEquals("a", expected.getFile());
+          }
+
+          try (SecureDirectoryStream<Path> barStream =
+     secureStream.newDirectoryStream(path("bar"))) {
+            barStream.newByteChannel(path("stuff"), Set.of(WRITE, CREATE_NEW)).close();
+            assertTrue(
+                    barStream
+                        .getFileAttributeView(path("stuff"), BasicFileAttributeView.class)
+                        .readAttributes()
+                        .isRegularFile());
+
+            assertTrue(
+                    secureStream
+                        .getFileAttributeView(path("bar/stuff"), BasicFileAttributeView.class)
+                        .readAttributes()
+                        .isRegularFile());
+          }
+
+          try (SecureDirectoryStream<Path> barLinkStream =
+              secureStream.newDirectoryStream(path("barLink"))) {
+            assertTrue(
+                    barLinkStream
+                        .getFileAttributeView(path("stuff"), BasicFileAttributeView.class)
+                        .readAttributes()
+                        .isRegularFile());
+
+            assertTrue(
+                    barLinkStream
+                        .getFileAttributeView(path(".."), BasicFileAttributeView.class)
+                        .readAttributes()
+                        .isDirectory());
+          }
+
+          try {
+            secureStream.newDirectoryStream(path("barLink"), NOFOLLOW_LINKS);
+            fail();
+          } catch (NotDirectoryException expected) {
+            assertEquals("barLink", expected.getFile());
+          }
+
+          try (SecureDirectoryStream<Path> barStream =
+     secureStream.newDirectoryStream(path("bar"))) {
+            secureStream.move(path("a"), barStream, path("moved"));
+
+            this.assertThatPath(path("/baz/stuff/a")).doesNotExist();
+            this.assertThatPath(path("/baz/stuff/bar/moved")).isRegularFile();
+
+            assertTrue(
+                    barStream
+                        .getFileAttributeView(path("moved"), BasicFileAttributeView.class)
+                        .readAttributes()
+                        .isRegularFile());
+          }
+        }
+      }
+
 //      @Test
 //      public void testSecureDirectoryStreamBasedOnRelativePath() throws IOException {
 //        Files.createDirectories(path("foo"));
