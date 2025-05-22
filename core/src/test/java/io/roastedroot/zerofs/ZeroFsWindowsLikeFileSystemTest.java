@@ -26,7 +26,7 @@ import org.junit.jupiter.api.Test;
  *
  * @author Colin Decker
  */
-public class ZeroFsWindowsLikeFileSystemTest extends AbstractJimfsIntegrationTest {
+public class ZeroFsWindowsLikeFileSystemTest extends AbstractZeroFsIntegrationTest {
 
     @Override
     protected FileSystem createFileSystem() {
