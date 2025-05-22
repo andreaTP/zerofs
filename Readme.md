@@ -1,3 +1,6 @@
+
+Finalizing at: https://github.com/roastedroot/zerofs
+
 # ZeroFs
 
 [![Build Status](https://github.com/roastedroot/zerofs/workflows/CI/badge.svg?branch=main)](https://github.com/roastedroot/zerofs/actions)
