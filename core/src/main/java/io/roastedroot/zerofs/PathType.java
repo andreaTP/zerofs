@@ -5,6 +5,7 @@ import java.net.URISyntaxException;
 import java.nio.file.InvalidPathException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
@@ -167,6 +168,10 @@ public abstract class PathType {
      * @throws InvalidPathException if the given path isn't valid for this path type
      */
     protected abstract ParseResult parseUriPath(String uriPath);
+
+    public final URI toUri(URI fileSystemUri, String root, List<String> names, boolean directory) {
+        return toUri(fileSystemUri, root, names.toArray(String[]::new), directory);
+    }
 
     /**
      * Creates a URI for the path with the given root and names in the file system with the given URI.

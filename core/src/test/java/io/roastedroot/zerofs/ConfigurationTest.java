@@ -63,9 +63,6 @@ public class ConfigurationTest {
         assertEquals(fs.getPath("/"), rootDirsIter.next());
         assertFalse(rootDirsIter.hasNext());
         assertEquals(fs.getPath("/work"), fs.getPath("").toRealPath());
-        // TODO: check
-        // assertThatPath(fs.getPath("").toRealPath()).isEqualTo(fs.getPath("/work"));
-        // assertThatPath was: assert_().about(paths()).that(path);
         Iterator<FileStore> fsIter = fs.getFileStores().iterator();
         assertEquals(4L * 1024 * 1024 * 1024, fsIter.next().getTotalSpace());
         assertFalse(fsIter.hasNext());
