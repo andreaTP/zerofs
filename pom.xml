@@ -7,7 +7,7 @@
   <version>999-SNAPSHOT</version>
   <packaging>pom</packaging>
 
-  <name>ZeroSs Parent</name>
+  <name>ZeroFs Parent</name>
 
   <description>ZeroFs is a rewrite of Jimfs without additional dependencies</description>
 
