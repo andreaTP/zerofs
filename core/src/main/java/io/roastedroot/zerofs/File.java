@@ -257,6 +257,6 @@ public abstract class File {
 
     @Override
     public String toString() {
-        return "File{" + "id=" + id + '}';
+        return this.getClass().getSimpleName() + "{" + "id=" + id + '}';
     }
 }

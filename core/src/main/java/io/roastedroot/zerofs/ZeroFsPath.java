@@ -60,7 +60,7 @@ final class ZeroFsPath implements Path {
      */
     public Name name() {
         if (!names.isEmpty()) {
-            return names.get(0);
+            return names.get(names.size() - 1);
         }
         return root;
     }
