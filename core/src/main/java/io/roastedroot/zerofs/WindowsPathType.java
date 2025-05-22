@@ -149,15 +149,7 @@ final class WindowsPathType extends PathType {
         if (root != null) {
             builder.append(root);
         }
-        // TODO: fixme
-        // joiner().appendTo(builder, names);
-        for (int i = 0; i < names.length; i++) {
-            if (i == 0) {
-                builder.append(names[i]);
-            } else {
-                builder.append('/').append(names[i]);
-            }
-        }
+        builder.append(this.join(names));
         return builder.toString();
     }
 
