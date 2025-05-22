@@ -38,7 +38,10 @@ import java.net.URI;
 import java.nio.ByteBuffer;
 import java.nio.channels.AsynchronousFileChannel;
 import java.nio.channels.FileChannel;
+import java.nio.channels.NonReadableChannelException;
+import java.nio.channels.NonWritableChannelException;
 import java.nio.channels.SeekableByteChannel;
+import java.nio.file.ClosedDirectoryStreamException;
 import java.nio.file.DirectoryNotEmptyException;
 import java.nio.file.DirectoryStream;
 import java.nio.file.FileAlreadyExistsException;
@@ -429,8 +432,8 @@ public class ZeroFsUnixLikeFileSystemTest extends AbstractZeroFsIntegrationTest 
         assertThatPath("/foo").hasChildren("link.txt");
     }
 
-      @Test
-      public void testCreateLink_absolute() throws IOException {
+    @Test
+    public void testCreateLink_absolute() throws IOException {
         Files.createFile(path("/test.txt"));
         Files.createLink(path("/link.txt"), path("/test.txt"));
 
@@ -444,10 +447,10 @@ public class ZeroFsUnixLikeFileSystemTest extends AbstractZeroFsIntegrationTest 
 
         assertThatPath("/foo/link.txt", NOFOLLOW_LINKS).isRegularFile();
         assertThatPath("/foo").hasChildren("link.txt");
-      }
+    }
 
-      @Test
-      public void testCreateDirectory_relative() throws IOException {
+    @Test
+    public void testCreateDirectory_relative() throws IOException {
         Files.createDirectory(path("test"));
 
         assertThatPath("/work/test", NOFOLLOW_LINKS).isDirectory();
@@ -463,10 +466,10 @@ public class ZeroFsUnixLikeFileSystemTest extends AbstractZeroFsIntegrationTest 
         assertThatPath("/work/foo").hasChildren("bar");
         assertThatPath("foo").hasChildren("bar");
         assertThatPath("foo/bar").isSameFileAs("/work/foo/bar");
-      }
+    }
 
-      @Test
-      public void testCreateFile_relative() throws IOException {
+    @Test
+    public void testCreateFile_relative() throws IOException {
         Files.createFile(path("test.txt"));
 
         assertThatPath("/work/test.txt", NOFOLLOW_LINKS).isRegularFile();
@@ -482,10 +485,10 @@ public class ZeroFsUnixLikeFileSystemTest extends AbstractZeroFsIntegrationTest 
         assertThatPath("/work/foo").hasChildren("test.txt");
         assertThatPath("foo").hasChildren("test.txt");
         assertThatPath("foo/test.txt").isSameFileAs("/work/foo/test.txt");
-      }
+    }
 
-      @Test
-      public void testCreateSymbolicLink_relative() throws IOException {
+    @Test
+    public void testCreateSymbolicLink_relative() throws IOException {
         Files.createSymbolicLink(path("link.txt"), path("test.txt"));
 
         assertThatPath("/work/link.txt", NOFOLLOW_LINKS).isSymbolicLink().withTarget("test.txt");
@@ -495,14 +498,16 @@ public class ZeroFsUnixLikeFileSystemTest extends AbstractZeroFsIntegrationTest 
         Files.createDirectory(path("foo"));
         Files.createSymbolicLink(path("foo/link.txt"), path("test.txt"));
 
-        assertThatPath("/work/foo/link.txt", NOFOLLOW_LINKS).isSymbolicLink().withTarget("test.txt");
+        assertThatPath("/work/foo/link.txt", NOFOLLOW_LINKS)
+                .isSymbolicLink()
+                .withTarget("test.txt");
         assertThatPath("foo/link.txt", NOFOLLOW_LINKS).isSymbolicLink().withTarget("test.txt");
         assertThatPath("/work/foo").hasChildren("link.txt");
         assertThatPath("foo").hasChildren("link.txt");
-      }
+    }
 
-      @Test
-      public void testCreateLink_relative() throws IOException {
+    @Test
+    public void testCreateLink_relative() throws IOException {
         Files.createFile(path("test.txt"));
         Files.createLink(path("link.txt"), path("test.txt"));
 
@@ -518,155 +523,155 @@ public class ZeroFsUnixLikeFileSystemTest extends AbstractZeroFsIntegrationTest 
         assertThatPath("/work/foo/link.txt", NOFOLLOW_LINKS).isRegularFile();
         assertThatPath("foo/link.txt", NOFOLLOW_LINKS).isRegularFile();
         assertThatPath("foo").hasChildren("link.txt");
-      }
+    }
 
-      @Test
-      public void testCreateFile_existing() throws IOException {
+    @Test
+    public void testCreateFile_existing() throws IOException {
         Files.createFile(path("/test"));
         try {
-          Files.createFile(path("/test"));
-          fail();
+            Files.createFile(path("/test"));
+            fail();
         } catch (FileAlreadyExistsException expected) {
-          assertEquals("/test", expected.getMessage());
+            assertEquals("/test", expected.getMessage());
         }
 
         try {
-          Files.createDirectory(path("/test"));
-          fail();
+            Files.createDirectory(path("/test"));
+            fail();
         } catch (FileAlreadyExistsException expected) {
-          assertEquals("/test", expected.getMessage());
+            assertEquals("/test", expected.getMessage());
         }
 
         try {
-          Files.createSymbolicLink(path("/test"), path("/foo"));
-          fail();
+            Files.createSymbolicLink(path("/test"), path("/foo"));
+            fail();
         } catch (FileAlreadyExistsException expected) {
-          assertEquals("/test", expected.getMessage());
+            assertEquals("/test", expected.getMessage());
         }
 
         Files.createFile(path("/foo"));
         try {
-          Files.createLink(path("/test"), path("/foo"));
-          fail();
+            Files.createLink(path("/test"), path("/foo"));
+            fail();
         } catch (FileAlreadyExistsException expected) {
-          assertEquals("/test", expected.getMessage());
+            assertEquals("/test", expected.getMessage());
         }
-      }
+    }
 
-      @Test
-      public void testCreateFile_parentDoesNotExist() throws IOException {
+    @Test
+    public void testCreateFile_parentDoesNotExist() throws IOException {
         try {
-          Files.createFile(path("/foo/test"));
-          fail();
+            Files.createFile(path("/foo/test"));
+            fail();
         } catch (NoSuchFileException expected) {
-          assertEquals("/foo/test", expected.getMessage());
-        }
-
-        try {
-          Files.createDirectory(path("/foo/test"));
-          fail();
-        } catch (NoSuchFileException expected) {
-          assertEquals("/foo/test", expected.getMessage());
+            assertEquals("/foo/test", expected.getMessage());
         }
 
         try {
-          Files.createSymbolicLink(path("/foo/test"), path("/bar"));
-          fail();
+            Files.createDirectory(path("/foo/test"));
+            fail();
         } catch (NoSuchFileException expected) {
-          assertEquals("/foo/test", expected.getMessage());
+            assertEquals("/foo/test", expected.getMessage());
+        }
+
+        try {
+            Files.createSymbolicLink(path("/foo/test"), path("/bar"));
+            fail();
+        } catch (NoSuchFileException expected) {
+            assertEquals("/foo/test", expected.getMessage());
         }
 
         Files.createFile(path("/bar"));
         try {
-          Files.createLink(path("/foo/test"), path("/bar"));
-          fail();
+            Files.createLink(path("/foo/test"), path("/bar"));
+            fail();
         } catch (NoSuchFileException expected) {
-          assertEquals("/foo/test", expected.getMessage());
+            assertEquals("/foo/test", expected.getMessage());
         }
-      }
+    }
 
-      @Test
-      public void testCreateFile_parentIsNotDirectory() throws IOException {
+    @Test
+    public void testCreateFile_parentIsNotDirectory() throws IOException {
         Files.createDirectory(path("/foo"));
         Files.createFile(path("/foo/bar"));
 
         try {
-          Files.createFile(path("/foo/bar/baz"));
-          fail();
+            Files.createFile(path("/foo/bar/baz"));
+            fail();
         } catch (NoSuchFileException expected) {
-          assertEquals("/foo/bar/baz", expected.getFile());
+            assertEquals("/foo/bar/baz", expected.getFile());
         }
-      }
+    }
 
-      @Test
-      public void testCreateFile_nonDirectoryHigherInPath() throws IOException {
+    @Test
+    public void testCreateFile_nonDirectoryHigherInPath() throws IOException {
         Files.createDirectory(path("/foo"));
         Files.createFile(path("/foo/bar"));
 
         try {
-          Files.createFile(path("/foo/bar/baz/stuff"));
-          fail();
+            Files.createFile(path("/foo/bar/baz/stuff"));
+            fail();
         } catch (NoSuchFileException expected) {
-          assertEquals("/foo/bar/baz/stuff", expected.getFile());
+            assertEquals("/foo/bar/baz/stuff", expected.getFile());
         }
-      }
+    }
 
-      @Test
-      public void testCreateFile_parentSymlinkDoesNotExist() throws IOException {
+    @Test
+    public void testCreateFile_parentSymlinkDoesNotExist() throws IOException {
         Files.createDirectory(path("/foo"));
         Files.createSymbolicLink(path("/foo/bar"), path("/foo/nope"));
 
         try {
-          Files.createFile(path("/foo/bar/baz"));
-          fail();
+            Files.createFile(path("/foo/bar/baz"));
+            fail();
         } catch (NoSuchFileException expected) {
-          assertEquals("/foo/bar/baz", expected.getFile());
+            assertEquals("/foo/bar/baz", expected.getFile());
         }
-      }
+    }
 
-      @Test
-      public void testCreateFile_symlinkHigherInPathDoesNotExist() throws IOException {
+    @Test
+    public void testCreateFile_symlinkHigherInPathDoesNotExist() throws IOException {
         Files.createDirectory(path("/foo"));
         Files.createSymbolicLink(path("/foo/bar"), path("nope"));
 
         try {
-          Files.createFile(path("/foo/bar/baz/stuff"));
-          fail();
+            Files.createFile(path("/foo/bar/baz/stuff"));
+            fail();
         } catch (NoSuchFileException expected) {
-          assertEquals("/foo/bar/baz/stuff", expected.getFile());
+            assertEquals("/foo/bar/baz/stuff", expected.getFile());
         }
-      }
+    }
 
-      @Test
-      public void testCreateFile_parentSymlinkDoesPointsToNonDirectory() throws IOException {
+    @Test
+    public void testCreateFile_parentSymlinkDoesPointsToNonDirectory() throws IOException {
         Files.createDirectory(path("/foo"));
         Files.createFile(path("/foo/file"));
         Files.createSymbolicLink(path("/foo/bar"), path("/foo/file"));
 
         try {
-          Files.createFile(path("/foo/bar/baz"));
-          fail();
+            Files.createFile(path("/foo/bar/baz"));
+            fail();
         } catch (NoSuchFileException expected) {
-          assertEquals("/foo/bar/baz", expected.getFile());
+            assertEquals("/foo/bar/baz", expected.getFile());
         }
-      }
+    }
 
-      @Test
-      public void testCreateFile_symlinkHigherInPathPointsToNonDirectory() throws IOException {
+    @Test
+    public void testCreateFile_symlinkHigherInPathPointsToNonDirectory() throws IOException {
         Files.createDirectory(path("/foo"));
         Files.createFile(path("/foo/file"));
         Files.createSymbolicLink(path("/foo/bar"), path("file"));
 
         try {
-          Files.createFile(path("/foo/bar/baz/stuff"));
-          fail();
+            Files.createFile(path("/foo/bar/baz/stuff"));
+            fail();
         } catch (NoSuchFileException expected) {
-          assertEquals("/foo/bar/baz/stuff", expected.getFile());
+            assertEquals("/foo/bar/baz/stuff", expected.getFile());
         }
-      }
+    }
 
-      @Test
-      public void testCreateFile_withInitialAttributes() throws IOException {
+    @Test
+    public void testCreateFile_withInitialAttributes() throws IOException {
         Set<PosixFilePermission> permissions = PosixFilePermissions.fromString("rwxrwxrwx");
         FileAttribute<?> permissionsAttr = PosixFilePermissions.asFileAttribute(permissions);
 
@@ -675,105 +680,104 @@ public class ZeroFsUnixLikeFileSystemTest extends AbstractZeroFsIntegrationTest 
 
         assertThatPath("/normal").attribute("posix:permissions").isNot(permissions);
         assertThatPath("/foo").attribute("posix:permissions").is(permissions);
-      }
+    }
 
-      @Test
-      public void testCreateFile_withInitialAttributes_illegalInitialAttribute() throws
-     IOException {
+    @Test
+    public void testCreateFile_withInitialAttributes_illegalInitialAttribute() throws IOException {
         try {
-          Files.createFile(
-              path("/foo"),
-              new BasicFileAttribute<>("basic:lastModifiedTime", FileTime.fromMillis(0L)));
-          fail();
+            Files.createFile(
+                    path("/foo"),
+                    new BasicFileAttribute<>("basic:lastModifiedTime", FileTime.fromMillis(0L)));
+            fail();
         } catch (UnsupportedOperationException expected) {
         }
 
         assertThatPath("/foo").doesNotExist();
 
         try {
-          Files.createFile(path("/foo"), new BasicFileAttribute<>("basic:noSuchAttribute",
-     "foo"));
-          fail();
+            Files.createFile(
+                    path("/foo"), new BasicFileAttribute<>("basic:noSuchAttribute", "foo"));
+            fail();
         } catch (UnsupportedOperationException expected) {
         }
 
         assertThatPath("/foo").doesNotExist();
-      }
+    }
 
-      @Test
-      public void testOpenChannel_withInitialAttributes_createNewFile() throws IOException {
+    @Test
+    public void testOpenChannel_withInitialAttributes_createNewFile() throws IOException {
         FileAttribute<Set<PosixFilePermission>> permissions =
-            PosixFilePermissions.asFileAttribute(PosixFilePermissions.fromString("rwxrwxrwx"));
+                PosixFilePermissions.asFileAttribute(PosixFilePermissions.fromString("rwxrwxrwx"));
         Files.newByteChannel(path("/foo"), Set.of(WRITE, CREATE), permissions).close();
 
         assertThatPath("/foo")
-            .isRegularFile()
-            .and()
-            .attribute("posix:permissions")
-            .is(permissions.value());
-      }
+                .isRegularFile()
+                .and()
+                .attribute("posix:permissions")
+                .is(permissions.value());
+    }
 
-      @Test
-      public void testOpenChannel_withInitialAttributes_fileExists() throws IOException {
+    @Test
+    public void testOpenChannel_withInitialAttributes_fileExists() throws IOException {
         Files.createFile(path("/foo"));
 
         FileAttribute<Set<PosixFilePermission>> permissions =
-            PosixFilePermissions.asFileAttribute(PosixFilePermissions.fromString("rwxrwxrwx"));
+                PosixFilePermissions.asFileAttribute(PosixFilePermissions.fromString("rwxrwxrwx"));
         Files.newByteChannel(path("/foo"), Set.of(WRITE, CREATE), permissions).close();
 
         assertThatPath("/foo")
-            .isRegularFile()
-            .and()
-            .attribute("posix:permissions")
-            .isNot(permissions.value());
-      }
+                .isRegularFile()
+                .and()
+                .attribute("posix:permissions")
+                .isNot(permissions.value());
+    }
 
-      @Test
-      public void testCreateDirectory_withInitialAttributes() throws IOException {
+    @Test
+    public void testCreateDirectory_withInitialAttributes() throws IOException {
         FileAttribute<Set<PosixFilePermission>> permissions =
-            PosixFilePermissions.asFileAttribute(PosixFilePermissions.fromString("rwxrwxrwx"));
+                PosixFilePermissions.asFileAttribute(PosixFilePermissions.fromString("rwxrwxrwx"));
 
         Files.createDirectory(path("/foo"), permissions);
 
         assertThatPath("/foo")
-            .isDirectory()
-            .and()
-            .attribute("posix:permissions")
-            .is(permissions.value());
+                .isDirectory()
+                .and()
+                .attribute("posix:permissions")
+                .is(permissions.value());
 
         Files.createDirectory(path("/normal"));
 
         assertThatPath("/normal")
-            .isDirectory()
-            .and()
-            .attribute("posix:permissions")
-            .isNot(permissions.value());
-      }
+                .isDirectory()
+                .and()
+                .attribute("posix:permissions")
+                .isNot(permissions.value());
+    }
 
-      @Test
-      public void testCreateSymbolicLink_withInitialAttributes() throws IOException {
+    @Test
+    public void testCreateSymbolicLink_withInitialAttributes() throws IOException {
         FileAttribute<Set<PosixFilePermission>> permissions =
-            PosixFilePermissions.asFileAttribute(PosixFilePermissions.fromString("rwxrwxrwx"));
+                PosixFilePermissions.asFileAttribute(PosixFilePermissions.fromString("rwxrwxrwx"));
 
         Files.createSymbolicLink(path("/foo"), path("bar"), permissions);
 
         assertThatPath("/foo", NOFOLLOW_LINKS)
-            .isSymbolicLink()
-            .and()
-            .attribute("posix:permissions")
-            .is(permissions.value());
+                .isSymbolicLink()
+                .and()
+                .attribute("posix:permissions")
+                .is(permissions.value());
 
         Files.createSymbolicLink(path("/normal"), path("bar"));
 
         assertThatPath("/normal", NOFOLLOW_LINKS)
-            .isSymbolicLink()
-            .and()
-            .attribute("posix:permissions")
-            .isNot(permissions.value());
-      }
+                .isSymbolicLink()
+                .and()
+                .attribute("posix:permissions")
+                .isNot(permissions.value());
+    }
 
-      @Test
-      public void testCreateDirectories() throws IOException {
+    @Test
+    public void testCreateDirectories() throws IOException {
         Files.createDirectories(path("/foo/bar/baz"));
 
         assertThatPath("/foo").isDirectory();
@@ -789,19 +793,19 @@ public class ZeroFsUnixLikeFileSystemTest extends AbstractZeroFsIntegrationTest 
 
         assertThatPath("bar/baz").isDirectory();
         assertThatPath("/work/bar/baz").isDirectory();
-      }
+    }
 
-      @Test
-      public void testDirectories_newlyCreatedDirectoryHasTwoLinks() throws IOException {
+    @Test
+    public void testDirectories_newlyCreatedDirectoryHasTwoLinks() throws IOException {
         // one link from its parent to it; one from it to itself
 
         Files.createDirectory(path("/foo"));
 
         assertThatPath("/foo").hasLinkCount(2);
-      }
+    }
 
-      @Test
-      public void testDirectories_creatingDirectoryAddsOneLinkToParent() throws IOException {
+    @Test
+    public void testDirectories_creatingDirectoryAddsOneLinkToParent() throws IOException {
         // from the .. direntry
 
         Files.createDirectory(path("/foo"));
@@ -812,11 +816,10 @@ public class ZeroFsUnixLikeFileSystemTest extends AbstractZeroFsIntegrationTest 
         Files.createDirectory(path("/foo/baz"));
 
         assertThatPath("/foo").hasLinkCount(4);
-      }
+    }
 
-      @Test
-      public void testDirectories_creatingNonDirectoryDoesNotAddLinkToParent() throws IOException
-     {
+    @Test
+    public void testDirectories_creatingNonDirectoryDoesNotAddLinkToParent() throws IOException {
         Files.createDirectory(path("/foo"));
         Files.createFile(path("/foo/file"));
         Files.createSymbolicLink(path("/foo/fileSymlink"), path("file"));
@@ -824,68 +827,69 @@ public class ZeroFsUnixLikeFileSystemTest extends AbstractZeroFsIntegrationTest 
         Files.createSymbolicLink(path("/foo/fooSymlink"), path("/foo"));
 
         assertThatPath("/foo").hasLinkCount(2);
-      }
+    }
 
-      @Test
-      public void testSize_forNewFile_isZero() throws IOException {
+    @Test
+    public void testSize_forNewFile_isZero() throws IOException {
         Files.createFile(path("/test"));
 
         assertThatPath("/test").hasSize(0);
-      }
+    }
 
-      @Test
-      public void testRead_forNewFile_isEmpty() throws IOException {
+    @Test
+    public void testRead_forNewFile_isEmpty() throws IOException {
         Files.createFile(path("/test"));
 
         assertThatPath("/test").containsNoBytes();
-      }
+    }
 
-      @Test
-      public void testWriteFile_succeeds() throws IOException {
+    @Test
+    public void testWriteFile_succeeds() throws IOException {
         Files.createFile(path("/test"));
         Files.write(path("/test"), new byte[] {0, 1, 2, 3});
-      }
+    }
 
-      @Test
-      public void testSize_forFileAfterWrite_isNumberOfBytesWritten() throws IOException {
+    @Test
+    public void testSize_forFileAfterWrite_isNumberOfBytesWritten() throws IOException {
         Files.write(path("/test"), new byte[] {0, 1, 2, 3});
 
         assertThatPath("/test").hasSize(4);
-      }
+    }
 
-      @Test
-      public void testRead_forFileAfterWrite_isBytesWritten() throws IOException {
+    @Test
+    public void testRead_forFileAfterWrite_isBytesWritten() throws IOException {
         byte[] bytes = {0, 1, 2, 3};
         Files.write(path("/test"), bytes);
 
         assertThatPath("/test").containsBytes(bytes);
-      }
+    }
 
-      @Test
-      public void testWriteFile_withStandardOptions() throws IOException {
+    @Test
+    public void testWriteFile_withStandardOptions() throws IOException {
         Path test = path("/test");
         byte[] bytes = {0, 1, 2, 3};
 
         try {
-          // CREATE and CREATE_NEW not specified
-          Files.write(test, bytes, WRITE);
-          fail();
+            // CREATE and CREATE_NEW not specified
+            Files.write(test, bytes, WRITE);
+            fail();
         } catch (NoSuchFileException expected) {
-          assertEquals(test.toString(), expected.getMessage());
+            assertEquals(test.toString(), expected.getMessage());
         }
 
         Files.write(test, bytes, CREATE_NEW); // succeeds, file does not exist
         assertThatPath("/test").containsBytes(bytes);
 
         try {
-          Files.write(test, bytes, CREATE_NEW); // CREATE_NEW requires file not exist
-          fail();
+            Files.write(test, bytes, CREATE_NEW); // CREATE_NEW requires file not exist
+            fail();
         } catch (FileAlreadyExistsException expected) {
-          assertEquals(test.toString(), expected.getMessage());
+            assertEquals(test.toString(), expected.getMessage());
         }
 
         Files.write(test, new byte[] {4, 5}, CREATE); // succeeds, ok for file to already exist
-        assertThatPath("/test").containsBytes(4, 5, 2, 3); // did not truncate or append, so overwrote
+        assertThatPath("/test")
+                .containsBytes(4, 5, 2, 3); // did not truncate or append, so overwrote
 
         Files.write(test, bytes, WRITE, CREATE, TRUNCATE_EXISTING); // default options
         assertThatPath("/test").containsBytes(bytes);
@@ -897,57 +901,57 @@ public class ZeroFsUnixLikeFileSystemTest extends AbstractZeroFsIntegrationTest 
         assertThatPath("/test").containsBytes(bytes);
 
         try {
-          Files.write(test, bytes, READ, WRITE); // READ not allowed
-          fail();
+            Files.write(test, bytes, READ, WRITE); // READ not allowed
+            fail();
         } catch (UnsupportedOperationException expected) {
         }
-      }
+    }
 
-      @Test
-      public void testWriteLines_succeeds() throws IOException {
+    @Test
+    public void testWriteLines_succeeds() throws IOException {
         Files.write(path("/test.txt"), List.of("hello", "world"), UTF_8);
-      }
+    }
 
-      @Test
-      public void testOpenFile_withReadAndTruncateExisting_doesNotTruncateFile() throws IOException {
+    @Test
+    public void testOpenFile_withReadAndTruncateExisting_doesNotTruncateFile() throws IOException {
         byte[] bytes = TestUtils.bytes(1, 2, 3, 4);
         Files.write(path("/test"), bytes);
 
         try (FileChannel channel = FileChannel.open(path("/test"), READ, TRUNCATE_EXISTING)) {
-          // TRUNCATE_EXISTING ignored when opening for read
-          byte[] readBytes = new byte[4];
-          channel.read(ByteBuffer.wrap(readBytes));
+            // TRUNCATE_EXISTING ignored when opening for read
+            byte[] readBytes = new byte[4];
+            channel.read(ByteBuffer.wrap(readBytes));
 
-          assertEquals(bytesAsList(bytes), bytesAsList(readBytes));
+            assertEquals(bytesAsList(bytes), bytesAsList(readBytes));
         }
-      }
+    }
 
-      @Test
-      public void testRead_forFileAfterWriteLines_isLinesWritten() throws IOException {
+    @Test
+    public void testRead_forFileAfterWriteLines_isLinesWritten() throws IOException {
         Files.write(path("/test.txt"), List.of("hello", "world"), UTF_8);
 
         assertThatPath("/test.txt").containsLines("hello", "world");
-      }
+    }
 
-      @Test
-      public void testWriteLines_withStandardOptions() throws IOException {
+    @Test
+    public void testWriteLines_withStandardOptions() throws IOException {
         Path test = path("/test.txt");
         List<String> lines = List.of("hello", "world");
 
         try {
-          // CREATE and CREATE_NEW not specified
-          Files.write(test, lines, UTF_8, WRITE);
-          fail();
+            // CREATE and CREATE_NEW not specified
+            Files.write(test, lines, UTF_8, WRITE);
+            fail();
         } catch (NoSuchFileException expected) {
-          assertEquals(test.toString(), expected.getMessage());
+            assertEquals(test.toString(), expected.getMessage());
         }
 
         Files.write(test, lines, UTF_8, CREATE_NEW); // succeeds, file does not exist
         this.assertThatPath(test).containsLines(lines);
 
         try {
-          Files.write(test, lines, UTF_8, CREATE_NEW); // CREATE_NEW requires file not exist
-          fail();
+            Files.write(test, lines, UTF_8, CREATE_NEW); // CREATE_NEW requires file not exist
+            fail();
         } catch (FileAlreadyExistsException expected) {
         }
 
@@ -955,10 +959,10 @@ public class ZeroFsUnixLikeFileSystemTest extends AbstractZeroFsIntegrationTest 
         Files.write(test, List.of("foo"), UTF_8, CREATE);
         // did not truncate or append, so overwrote
         if (System.getProperty("line.separator").length() == 2) {
-          // on Windows, an extra character is overwritten by the \r\n line separator
-          this.assertThatPath(test).containsLines("foo", "", "world");
+            // on Windows, an extra character is overwritten by the \r\n line separator
+            this.assertThatPath(test).containsLines("foo", "", "world");
         } else {
-          this.assertThatPath(test).containsLines("foo", "o", "world");
+            this.assertThatPath(test).containsLines("foo", "o", "world");
         }
 
         Files.write(test, lines, UTF_8, WRITE, CREATE, TRUNCATE_EXISTING); // default options
@@ -967,54 +971,54 @@ public class ZeroFsUnixLikeFileSystemTest extends AbstractZeroFsIntegrationTest 
         Files.write(test, lines, UTF_8, WRITE, APPEND);
         this.assertThatPath(test).containsLines("hello", "world", "hello", "world");
 
-        Files.write(test, lines, UTF_8, WRITE, CREATE, TRUNCATE_EXISTING, APPEND, SPARSE, DSYNC,
-     SYNC);
+        Files.write(
+                test, lines, UTF_8, WRITE, CREATE, TRUNCATE_EXISTING, APPEND, SPARSE, DSYNC, SYNC);
         this.assertThatPath(test).containsLines(lines);
 
         try {
-          Files.write(test, lines, UTF_8, READ, WRITE); // READ not allowed
-          fail();
+            Files.write(test, lines, UTF_8, READ, WRITE); // READ not allowed
+            fail();
         } catch (UnsupportedOperationException expected) {
         }
-      }
+    }
 
-      @Test
-      public void testWrite_fileExistsButIsNotRegularFile() throws IOException {
+    @Test
+    public void testWrite_fileExistsButIsNotRegularFile() throws IOException {
         Files.createDirectory(path("/foo"));
 
         try {
-          // non-CREATE mode
-          Files.write(path("/foo"), preFilledBytes(10), WRITE);
-          fail();
+            // non-CREATE mode
+            Files.write(path("/foo"), preFilledBytes(10), WRITE);
+            fail();
         } catch (FileSystemException expected) {
-          assertEquals("/foo", expected.getFile());
-          assertTrue(expected.getMessage().contains("regular file"));
+            assertEquals("/foo", expected.getFile());
+            assertTrue(expected.getMessage().contains("regular file"));
         }
 
         try {
-          // CREATE mode
-          Files.write(path("/foo"), preFilledBytes(10));
-          fail();
+            // CREATE mode
+            Files.write(path("/foo"), preFilledBytes(10));
+            fail();
         } catch (FileSystemException expected) {
-          assertEquals("/foo", expected.getFile());
-          assertTrue(expected.getMessage().contains("regular file"));
+            assertEquals("/foo", expected.getFile());
+            assertTrue(expected.getMessage().contains("regular file"));
         }
-      }
+    }
 
-      @Test
-      public void testDelete_file() throws IOException {
+    @Test
+    public void testDelete_file() throws IOException {
         try {
-          Files.delete(path("/test"));
-          fail();
+            Files.delete(path("/test"));
+            fail();
         } catch (NoSuchFileException expected) {
-          assertEquals("/test", expected.getMessage());
+            assertEquals("/test", expected.getMessage());
         }
 
         try {
-          Files.delete(path("/foo/bar"));
-          fail();
+            Files.delete(path("/foo/bar"));
+            fail();
         } catch (NoSuchFileException expected) {
-          assertEquals("/foo/bar", expected.getMessage());
+            assertEquals("/foo/bar", expected.getMessage());
         }
 
         assertFalse(Files.deleteIfExists(path("/test")));
@@ -1030,10 +1034,10 @@ public class ZeroFsUnixLikeFileSystemTest extends AbstractZeroFsIntegrationTest 
 
         assertTrue(Files.deleteIfExists(path("/test")));
         assertThatPath("/test").doesNotExist();
-      }
+    }
 
-      @Test
-      public void testDelete_file_whenOpenReferencesRemain() throws IOException {
+    @Test
+    public void testDelete_file_whenOpenReferencesRemain() throws IOException {
         // the open streams should continue to function normally despite the deletion
 
         Path foo = path("/foo");
@@ -1053,7 +1057,7 @@ public class ZeroFsUnixLikeFileSystemTest extends AbstractZeroFsIntegrationTest 
 
         ByteBuffer buf = ByteBuffer.allocate(100);
         while (buf.hasRemaining()) {
-          channel.read(buf);
+            channel.read(buf);
         }
 
         assertArrayEquals(bytes, buf.array());
@@ -1074,17 +1078,17 @@ public class ZeroFsUnixLikeFileSystemTest extends AbstractZeroFsIntegrationTest 
         int off = 0;
         int read;
         while ((read = in.read(allBytes, off, allBytes.length - off)) != -1) {
-          off += read;
+            off += read;
         }
         assertArrayEquals(concat(bytes, moreBytes), allBytes);
 
         channel.close();
         out.close();
         in.close();
-      }
+    }
 
-      @Test
-      public void testDelete_directory() throws IOException {
+    @Test
+    public void testDelete_directory() throws IOException {
         Files.createDirectories(path("/foo/bar"));
         assertThatPath("/foo").isDirectory();
         assertThatPath("/foo/bar").isDirectory();
@@ -1094,54 +1098,53 @@ public class ZeroFsUnixLikeFileSystemTest extends AbstractZeroFsIntegrationTest 
 
         assertTrue(Files.deleteIfExists(path("/foo")));
         assertThatPath("/foo").doesNotExist();
-      }
+    }
 
-      @Test
-      public void testDelete_pathPermutations() throws IOException {
+    @Test
+    public void testDelete_pathPermutations() throws IOException {
         Path bar = path("/work/foo/bar");
         Files.createDirectories(bar);
         for (Path path : permutations(bar)) {
-          Files.createDirectories(bar);
-          this.assertThatPath(path).isSameFileAs(bar);
-          Files.delete(path);
-          this.assertThatPath(bar).doesNotExist();
-          this.assertThatPath(path).doesNotExist();
+            Files.createDirectories(bar);
+            this.assertThatPath(path).isSameFileAs(bar);
+            Files.delete(path);
+            this.assertThatPath(bar).doesNotExist();
+            this.assertThatPath(path).doesNotExist();
         }
 
         Path baz = path("/test/baz");
         Files.createDirectories(baz);
         Path hello = baz.resolve("hello.txt");
         for (Path path : permutations(hello)) {
-          Files.createFile(hello);
-          this.assertThatPath(path).isSameFileAs(hello);
-          Files.delete(path);
-          this.assertThatPath(hello).doesNotExist();
-          this.assertThatPath(path).doesNotExist();
+            Files.createFile(hello);
+            this.assertThatPath(path).isSameFileAs(hello);
+            Files.delete(path);
+            this.assertThatPath(hello).doesNotExist();
+            this.assertThatPath(path).doesNotExist();
         }
-      }
+    }
 
-      @Test
-      public void testDelete_directory_cantDeleteNonEmptyDirectory() throws IOException {
+    @Test
+    public void testDelete_directory_cantDeleteNonEmptyDirectory() throws IOException {
         Files.createDirectories(path("/foo/bar"));
 
         try {
-          Files.delete(path("/foo"));
-          fail();
+            Files.delete(path("/foo"));
+            fail();
         } catch (DirectoryNotEmptyException expected) {
-          assertEquals("/foo", expected.getFile());
+            assertEquals("/foo", expected.getFile());
         }
 
         try {
-          Files.deleteIfExists(path("/foo"));
-          fail();
+            Files.deleteIfExists(path("/foo"));
+            fail();
         } catch (DirectoryNotEmptyException expected) {
-          assertEquals("/foo", expected.getFile());
+            assertEquals("/foo", expected.getFile());
         }
-      }
+    }
 
-      @Test
-      public void testDelete_directory_canDeleteWorkingDirectoryByAbsolutePath() throws
-     IOException {
+    @Test
+    public void testDelete_directory_canDeleteWorkingDirectoryByAbsolutePath() throws IOException {
         assertThatPath("/work").exists();
         assertThatPath("").exists();
         assertThatPath(".").exists();
@@ -1151,85 +1154,84 @@ public class ZeroFsUnixLikeFileSystemTest extends AbstractZeroFsIntegrationTest 
         assertThatPath("/work").doesNotExist();
         assertThatPath("").exists();
         assertThatPath(".").exists();
-      }
+    }
 
-      @Test
-      public void testDelete_directory_cantDeleteWorkingDirectoryByRelativePath() throws
-     IOException {
+    @Test
+    public void testDelete_directory_cantDeleteWorkingDirectoryByRelativePath() throws IOException {
         try {
-          Files.delete(path(""));
-          fail();
+            Files.delete(path(""));
+            fail();
         } catch (FileSystemException expected) {
-          assertEquals("", expected.getFile());
+            assertEquals("", expected.getFile());
         }
 
         try {
-          Files.delete(path("."));
-          fail();
+            Files.delete(path("."));
+            fail();
         } catch (FileSystemException expected) {
-          assertEquals(".", expected.getFile());
+            assertEquals(".", expected.getFile());
         }
 
         try {
-          Files.delete(path("../../work"));
-          fail();
+            Files.delete(path("../../work"));
+            fail();
         } catch (FileSystemException expected) {
-          assertEquals("../../work", expected.getFile());
+            assertEquals("../../work", expected.getFile());
         }
 
         try {
-          Files.delete(path("./../work/.././../work/."));
-          fail();
+            Files.delete(path("./../work/.././../work/."));
+            fail();
         } catch (FileSystemException expected) {
-          assertEquals("./../work/.././../work/.", expected.getFile());
+            assertEquals("./../work/.././../work/.", expected.getFile());
         }
-      }
+    }
 
-      @Test
-      public void testDelete_directory_cantDeleteRoot() throws IOException {
+    @Test
+    public void testDelete_directory_cantDeleteRoot() throws IOException {
         // delete working directory so that root is empty
         // don't want to just be testing the "can't delete when not empty" logic
         Files.delete(path("/work"));
 
         try {
-          Files.delete(path("/"));
-          fail();
+            Files.delete(path("/"));
+            fail();
         } catch (IOException expected) {
-          assertTrue(expected.getMessage().contains("root"));
+            assertTrue(expected.getMessage().contains("root"));
         }
 
         Files.createDirectories(path("/foo/bar"));
 
         try {
-          Files.delete(path("/foo/bar/../.."));
-          fail();
+            Files.delete(path("/foo/bar/../.."));
+            fail();
         } catch (IOException expected) {
-          assertTrue(expected.getMessage().contains("root"));
+            assertTrue(expected.getMessage().contains("root"));
         }
 
         try {
-          Files.delete(path("/foo/./../foo/bar/./../bar/.././../../.."));
-          fail();
+            Files.delete(path("/foo/./../foo/bar/./../bar/.././../../.."));
+            fail();
         } catch (IOException expected) {
-          assertTrue(expected.getMessage().contains("root"));
+            assertTrue(expected.getMessage().contains("root"));
         }
-      }
+    }
 
-      @Test
-      public void testSymbolicLinks() throws IOException {
+    @Test
+    public void testSymbolicLinks() throws IOException {
         Files.createSymbolicLink(path("/link.txt"), path("/file.txt"));
         assertThatPath("/link.txt", NOFOLLOW_LINKS).isSymbolicLink().withTarget("/file.txt");
         assertThatPath("/link.txt").doesNotExist(); // following the link; target doesn't exist
 
         try {
-          Files.createFile(path("/link.txt"));
-          fail();
+            Files.createFile(path("/link.txt"));
+            fail();
         } catch (FileAlreadyExistsException expected) {
         }
 
         try {
-          Files.readAllBytes(path("/link.txt"));
-          fail();
+            Files.readAllBytes(path("/link.txt"));
+            fail();
         } catch (NoSuchFileException expected) {
         }
 
@@ -1248,44 +1250,43 @@ public class ZeroFsUnixLikeFileSystemTest extends AbstractZeroFsIntegrationTest 
         assertThatPath("/foo/test.txt", NOFOLLOW_LINKS).isRegularFile(); // follow intermediate link
 
         try {
-          Files.readSymbolicLink(path("/none"));
-          fail();
+            Files.readSymbolicLink(path("/none"));
+            fail();
         } catch (NoSuchFileException expected) {
-          assertEquals("/none", expected.getMessage());
+            assertEquals("/none", expected.getMessage());
         }
 
         try {
-          Files.readSymbolicLink(path("/file.txt"));
-          fail();
+            Files.readSymbolicLink(path("/file.txt"));
+            fail();
         } catch (NotLinkException expected) {
-          assertEquals("/file.txt", expected.getMessage());
+            assertEquals("/file.txt", expected.getMessage());
         }
-      }
+    }
 
-      @Test
-      public void testSymbolicLinks_symlinkCycle() throws IOException {
+    @Test
+    public void testSymbolicLinks_symlinkCycle() throws IOException {
         Files.createDirectory(path("/foo"));
         Files.createSymbolicLink(path("/foo/bar"), path("baz"));
         Files.createSymbolicLink(path("/foo/baz"), path("bar"));
 
         try {
-          Files.createFile(path("/foo/bar/file"));
-          fail();
+            Files.createFile(path("/foo/bar/file"));
+            fail();
         } catch (IOException expected) {
-          assertTrue(expected.getMessage().contains("symbolic link"));
+            assertTrue(expected.getMessage().contains("symbolic link"));
         }
 
         try {
-          Files.write(path("/foo/bar"), preFilledBytes(10));
-          fail();
+            Files.write(path("/foo/bar"), preFilledBytes(10));
+            fail();
         } catch (IOException expected) {
-          assertTrue(expected.getMessage().contains("symbolic link"));
+            assertTrue(expected.getMessage().contains("symbolic link"));
         }
-      }
+    }
 
-      @Test
-      public void testSymbolicLinks_lookupOfAbsoluteSymlinkPathFromRelativePath() throws
-     IOException {
+    @Test
+    public void testSymbolicLinks_lookupOfAbsoluteSymlinkPathFromRelativePath() throws IOException {
         // relative path lookups are in the FileSystemView for the working directory
         // this tests that when an absolute path is encountered, the lookup handles it correctly
 
@@ -1295,10 +1296,10 @@ public class ZeroFsUnixLikeFileSystemTest extends AbstractZeroFsIntegrationTest 
         Files.createSymbolicLink(path("/work/one/two/three/link"), path("/foo/bar"));
 
         assertThatPath("one/two/three/link/baz/file").isSameFileAs("/foo/bar/baz/file");
-      }
+    }
 
-      @Test
-      public void testLink() throws IOException {
+    @Test
+    public void testLink() throws IOException {
         Files.createFile(path("/file.txt"));
         // checking link count requires "unix" attribute support, which we're using here
         assertThatPath("/file.txt").hasLinkCount(1);
@@ -1328,10 +1329,10 @@ public class ZeroFsUnixLikeFileSystemTest extends AbstractZeroFsIntegrationTest 
         assertThatPath("/link.txt").hasLinkCount(1);
 
         assertThatPath("/link.txt").containsBytes(0, 1, 2, 3, 0, 1, 2, 3);
-      }
+    }
 
-      @Test
-      public void testLink_forSymbolicLink_usesSymbolicLinkTarget() throws IOException {
+    @Test
+    public void testLink_forSymbolicLink_usesSymbolicLinkTarget() throws IOException {
         Files.createFile(path("/file"));
         Files.createSymbolicLink(path("/symlink"), path("/file"));
 
@@ -1340,139 +1341,139 @@ public class ZeroFsUnixLikeFileSystemTest extends AbstractZeroFsIntegrationTest 
         Files.createLink(path("/link"), path("/symlink"));
 
         assertThatPath("/link")
-            .isRegularFile()
-            .and()
-            .hasLinkCount(2)
-            .and()
-            .attribute("fileKey")
-            .is(key);
-      }
+                .isRegularFile()
+                .and()
+                .hasLinkCount(2)
+                .and()
+                .attribute("fileKey")
+                .is(key);
+    }
 
-      @Test
-      public void testLink_failsWhenTargetDoesNotExist() throws IOException {
+    @Test
+    public void testLink_failsWhenTargetDoesNotExist() throws IOException {
         try {
-          Files.createLink(path("/link"), path("/foo"));
-          fail();
+            Files.createLink(path("/link"), path("/foo"));
+            fail();
         } catch (NoSuchFileException expected) {
-          assertEquals("/foo", expected.getFile());
+            assertEquals("/foo", expected.getFile());
         }
 
         Files.createSymbolicLink(path("/foo"), path("/bar"));
 
         try {
-          Files.createLink(path("/link"), path("/foo"));
-          fail();
+            Files.createLink(path("/link"), path("/foo"));
+            fail();
         } catch (NoSuchFileException expected) {
-          assertEquals("/foo", expected.getFile());
+            assertEquals("/foo", expected.getFile());
         }
-      }
+    }
 
-      @Test
-      public void testLink_failsForNonRegularFile() throws IOException {
+    @Test
+    public void testLink_failsForNonRegularFile() throws IOException {
         Files.createDirectory(path("/dir"));
 
         try {
-          Files.createLink(path("/link"), path("/dir"));
-          fail();
+            Files.createLink(path("/link"), path("/dir"));
+            fail();
         } catch (FileSystemException expected) {
-          assertEquals("/link", expected.getFile());
-          assertEquals("/dir", expected.getOtherFile());
+            assertEquals("/link", expected.getFile());
+            assertEquals("/dir", expected.getOtherFile());
         }
 
         assertThatPath("/link").doesNotExist();
-      }
+    }
 
-      @Test
-      public void testLinks_failsWhenTargetFileAlreadyExists() throws IOException {
+    @Test
+    public void testLinks_failsWhenTargetFileAlreadyExists() throws IOException {
         Files.createFile(path("/file"));
         Files.createFile(path("/link"));
 
         try {
-          Files.createLink(path("/link"), path("/file"));
-          fail();
+            Files.createLink(path("/link"), path("/file"));
+            fail();
         } catch (FileAlreadyExistsException expected) {
-          assertEquals("/link", expected.getFile());
+            assertEquals("/link", expected.getFile());
         }
-      }
+    }
 
-      @Test
-      public void testStreams() throws IOException {
+    @Test
+    public void testStreams() throws IOException {
         try (OutputStream out = Files.newOutputStream(path("/test"))) {
-          for (int i = 0; i < 100; i++) {
-            out.write(i);
-          }
+            for (int i = 0; i < 100; i++) {
+                out.write(i);
+            }
         }
 
         byte[] expected = new byte[100];
         for (byte i = 0; i < 100; i++) {
-          expected[i] = i;
+            expected[i] = i;
         }
 
         try (InputStream in = Files.newInputStream(path("/test"))) {
-          byte[] bytes = new byte[100];
-          in.read(bytes);
-          // ByteStreams.readFully(in, bytes);
-          assertArrayEquals(expected, bytes);
+            byte[] bytes = new byte[100];
+            in.read(bytes);
+            // ByteStreams.readFully(in, bytes);
+            assertArrayEquals(expected, bytes);
         }
 
         try (Writer writer = Files.newBufferedWriter(path("/test.txt"), UTF_8)) {
-          writer.write("hello");
+            writer.write("hello");
         }
 
         try (Reader reader = Files.newBufferedReader(path("/test.txt"), UTF_8)) {
-          assertEquals("hello", readAll(reader));
+            assertEquals("hello", readAll(reader));
         }
 
         try (Writer writer = Files.newBufferedWriter(path("/test.txt"), UTF_8, APPEND)) {
-          writer.write(" world");
+            writer.write(" world");
         }
 
         try (Reader reader = Files.newBufferedReader(path("/test.txt"), UTF_8)) {
-          assertEquals("hello world", readAll(reader));
+            assertEquals("hello world", readAll(reader));
         }
-      }
+    }
 
-      @Test
-      public void testOutputStream_withTruncateExistingAndNotWrite_truncatesFile() throws
-     IOException {
+    @Test
+    public void testOutputStream_withTruncateExistingAndNotWrite_truncatesFile()
+            throws IOException {
         // https://github.com/google/jimfs/pull/77
         Path path = path("/test");
         Files.write(path, new byte[] {1, 2, 3});
         this.assertThatPath(path).containsBytes(1, 2, 3);
 
         try (OutputStream out = Files.newOutputStream(path, CREATE, TRUNCATE_EXISTING)) {
-          out.write(new byte[] {1, 2});
+            out.write(new byte[] {1, 2});
         }
 
         this.assertThatPath(path).containsBytes(1, 2);
-      }
+    }
 
-      @Test
-      public void testChannels() throws IOException {
+    @Test
+    public void testChannels() throws IOException {
         try (FileChannel channel = FileChannel.open(path("/test.txt"), CREATE_NEW, WRITE)) {
-          ByteBuffer buf1 = UTF_8.encode("hello");
-          ByteBuffer buf2 = UTF_8.encode(" world");
-          while (buf1.hasRemaining() || buf2.hasRemaining()) {
-            channel.write(new ByteBuffer[] {buf1, buf2});
-          }
+            ByteBuffer buf1 = UTF_8.encode("hello");
+            ByteBuffer buf2 = UTF_8.encode(" world");
+            while (buf1.hasRemaining() || buf2.hasRemaining()) {
+                channel.write(new ByteBuffer[] {buf1, buf2});
+            }
 
-          assertEquals(11, channel.position());
-          assertEquals(11, channel.size());
+            assertEquals(11, channel.position());
+            assertEquals(11, channel.size());
 
-          channel.write(UTF_8.encode("!"));
+            channel.write(UTF_8.encode("!"));
 
-          assertEquals(12, channel.position());
-          assertEquals(12, channel.size());
+            assertEquals(12, channel.position());
+            assertEquals(12, channel.size());
         }
 
         try (SeekableByteChannel channel = Files.newByteChannel(path("/test.txt"), READ)) {
-          assertEquals(0, channel.position());
-          assertEquals(12, channel.size());
+            assertEquals(0, channel.position());
+            assertEquals(12, channel.size());
 
-          ByteBuffer buffer = ByteBuffer.allocate(100);
-          while (channel.read(buffer) != -1) {}
-          buffer.flip();
-          assertEquals("hello world!", UTF_8.decode(buffer).toString());
+            ByteBuffer buffer = ByteBuffer.allocate(100);
+            while (channel.read(buffer) != -1) {}
+            buffer.flip();
+            assertEquals("hello world!", UTF_8.decode(buffer).toString());
         }
 
         byte[] bytes = preFilledBytes(100);
@@ -1480,53 +1481,52 @@ public class ZeroFsUnixLikeFileSystemTest extends AbstractZeroFsIntegrationTest 
         Files.write(path("/test"), bytes);
 
         try (SeekableByteChannel channel = Files.newByteChannel(path("/test"), READ, WRITE)) {
-          ByteBuffer buffer = ByteBuffer.wrap(preFilledBytes(50));
+            ByteBuffer buffer = ByteBuffer.wrap(preFilledBytes(50));
 
-          channel.position(50);
-          channel.write(buffer);
-          buffer.flip();
-          channel.write(buffer);
+            channel.position(50);
+            channel.write(buffer);
+            buffer.flip();
+            channel.write(buffer);
 
-          channel.position(0);
-          ByteBuffer readBuffer = ByteBuffer.allocate(150);
-          while (readBuffer.hasRemaining()) {
-            channel.read(readBuffer);
-          }
+            channel.position(0);
+            ByteBuffer readBuffer = ByteBuffer.allocate(150);
+            while (readBuffer.hasRemaining()) {
+                channel.read(readBuffer);
+            }
 
-          byte[] expected = concat(preFilledBytes(50), preFilledBytes(50),
-     preFilledBytes(50));
+            byte[] expected = concat(preFilledBytes(50), preFilledBytes(50), preFilledBytes(50));
 
-          assertArrayEquals(expected, readBuffer.array());
+            assertArrayEquals(expected, readBuffer.array());
         }
 
         try (FileChannel channel = FileChannel.open(path("/test"), READ, WRITE)) {
-          assertEquals(150, channel.size());
+            assertEquals(150, channel.size());
 
-          channel.truncate(10);
-          assertEquals(10, channel.size());
+            channel.truncate(10);
+            assertEquals(10, channel.size());
 
-          ByteBuffer buffer = ByteBuffer.allocate(20);
-          assertEquals(10, channel.read(buffer));
-          buffer.flip();
+            ByteBuffer buffer = ByteBuffer.allocate(20);
+            assertEquals(10, channel.read(buffer));
+            buffer.flip();
 
-          byte[] expected = new byte[20];
-          System.arraycopy(preFilledBytes(10), 0, expected, 0, 10);
-          assertArrayEquals(expected, buffer.array());
+            byte[] expected = new byte[20];
+            System.arraycopy(preFilledBytes(10), 0, expected, 0, 10);
+            assertArrayEquals(expected, buffer.array());
         }
-      }
+    }
 
-      @Test
-      public void testCopy_inputStreamToFile() throws IOException {
+    @Test
+    public void testCopy_inputStreamToFile() throws IOException {
         byte[] bytes = preFilledBytes(512);
 
         Files.copy(new ByteArrayInputStream(bytes), path("/test"));
         assertThatPath("/test").containsBytes(bytes);
 
         try {
-          Files.copy(new ByteArrayInputStream(bytes), path("/test"));
-          fail();
+            Files.copy(new ByteArrayInputStream(bytes), path("/test"));
+            fail();
         } catch (FileAlreadyExistsException expected) {
-          assertEquals("/test", expected.getMessage());
+            assertEquals("/test", expected.getMessage());
         }
 
         Files.copy(new ByteArrayInputStream(bytes), path("/test"), REPLACE_EXISTING);
@@ -1534,20 +1534,20 @@ public class ZeroFsUnixLikeFileSystemTest extends AbstractZeroFsIntegrationTest 
 
         Files.copy(new ByteArrayInputStream(bytes), path("/foo"), REPLACE_EXISTING);
         assertThatPath("/foo").containsBytes(bytes);
-      }
+    }
 
-      @Test
-      public void testCopy_fileToOutputStream() throws IOException {
+    @Test
+    public void testCopy_fileToOutputStream() throws IOException {
         byte[] bytes = preFilledBytes(512);
         Files.write(path("/test"), bytes);
 
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         Files.copy(path("/test"), out);
         assertArrayEquals(bytes, out.toByteArray());
-      }
+    }
 
-      @Test
-      public void testCopy_fileToPath() throws IOException {
+    @Test
+    public void testCopy_fileToPath() throws IOException {
         byte[] bytes = preFilledBytes(512);
         Files.write(path("/foo"), bytes);
 
@@ -1562,21 +1562,23 @@ public class ZeroFsUnixLikeFileSystemTest extends AbstractZeroFsIntegrationTest 
         assertThatPath("/bar").containsBytes(moreBytes);
 
         try {
-          Files.copy(path("/none"), path("/bar"));
-          fail();
+            Files.copy(path("/none"), path("/bar"));
+            fail();
         } catch (NoSuchFileException expected) {
-          assertEquals("/none", expected.getMessage());
+            assertEquals("/none", expected.getMessage());
         }
-      }
+    }
 
-      @Test
-      public void testCopy_withCopyAttributes() throws IOException {
+    @Test
+    public void testCopy_withCopyAttributes() throws IOException {
         Path foo = path("/foo");
         Files.createFile(foo);
 
         Files.getFileAttributeView(foo, BasicFileAttributeView.class)
-            .setTimes(FileTime.fromMillis(100), FileTime.fromMillis(1000),
-     FileTime.fromMillis(10000));
+                .setTimes(
+                        FileTime.fromMillis(100),
+                        FileTime.fromMillis(1000),
+                        FileTime.fromMillis(10000));
 
         assertEquals(FileTime.fromMillis(100), Files.getAttribute(foo, "lastModifiedTime"));
 
@@ -1601,37 +1603,37 @@ public class ZeroFsUnixLikeFileSystemTest extends AbstractZeroFsIntegrationTest 
         assertNotEquals(FileTime.fromMillis(1000), attributes.lastAccessTime());
         assertNotEquals(FileTime.fromMillis(10000), attributes.creationTime());
         assertNotEquals(zero, Files.getAttribute(baz, "owner:owner"));
-      }
+    }
 
-      @Test
-      public void testCopy_doesNotSupportAtomicMove() throws IOException {
+    @Test
+    public void testCopy_doesNotSupportAtomicMove() throws IOException {
         try {
-          Files.copy(path("/foo"), path("/bar"), ATOMIC_MOVE);
-          fail();
+            Files.copy(path("/foo"), path("/bar"), ATOMIC_MOVE);
+            fail();
         } catch (UnsupportedOperationException expected) {
         }
-      }
+    }
 
-      @Test
-      public void testCopy_directoryToPath() throws IOException {
+    @Test
+    public void testCopy_directoryToPath() throws IOException {
         Files.createDirectory(path("/foo"));
 
         assertThatPath("/bar").doesNotExist();
         Files.copy(path("/foo"), path("/bar"));
         assertThatPath("/bar").isDirectory();
-      }
+    }
 
-      @Test
-      public void testCopy_withoutReplaceExisting_failsWhenTargetExists() throws IOException {
+    @Test
+    public void testCopy_withoutReplaceExisting_failsWhenTargetExists() throws IOException {
         Files.createFile(path("/bar"));
         Files.createDirectory(path("/foo"));
 
         // dir -> file
         try {
-          Files.copy(path("/foo"), path("/bar"));
-          fail();
+            Files.copy(path("/foo"), path("/bar"));
+            fail();
         } catch (FileAlreadyExistsException expected) {
-          assertEquals("/bar", expected.getMessage());
+            assertEquals("/bar", expected.getMessage());
         }
 
         Files.delete(path("/foo"));
@@ -1639,10 +1641,10 @@ public class ZeroFsUnixLikeFileSystemTest extends AbstractZeroFsIntegrationTest 
 
         // file -> file
         try {
-          Files.copy(path("/foo"), path("/bar"));
-          fail();
+            Files.copy(path("/foo"), path("/bar"));
+            fail();
         } catch (FileAlreadyExistsException expected) {
-          assertEquals("/bar", expected.getMessage());
+            assertEquals("/bar", expected.getMessage());
         }
 
         Files.delete(path("/bar"));
@@ -1650,10 +1652,10 @@ public class ZeroFsUnixLikeFileSystemTest extends AbstractZeroFsIntegrationTest 
 
         // file -> dir
         try {
-          Files.copy(path("/foo"), path("/bar"));
-          fail();
+            Files.copy(path("/foo"), path("/bar"));
+            fail();
         } catch (FileAlreadyExistsException expected) {
-          assertEquals("/bar", expected.getMessage());
+            assertEquals("/bar", expected.getMessage());
         }
 
         Files.delete(path("/foo"));
@@ -1661,15 +1663,15 @@ public class ZeroFsUnixLikeFileSystemTest extends AbstractZeroFsIntegrationTest 
 
         // dir -> dir
         try {
-          Files.copy(path("/foo"), path("/bar"));
-          fail();
+            Files.copy(path("/foo"), path("/bar"));
+            fail();
         } catch (FileAlreadyExistsException expected) {
-          assertEquals("/bar", expected.getMessage());
+            assertEquals("/bar", expected.getMessage());
         }
-      }
+    }
 
-      @Test
-      public void testCopy_withReplaceExisting() throws IOException {
+    @Test
+    public void testCopy_withReplaceExisting() throws IOException {
         Files.createFile(path("/bar"));
         Files.createDirectory(path("/test"));
 
@@ -1687,10 +1689,10 @@ public class ZeroFsUnixLikeFileSystemTest extends AbstractZeroFsIntegrationTest 
         Files.copy(path("/baz"), path("/bar"), REPLACE_EXISTING);
 
         assertThatPath("/bar").containsSameBytesAs("/baz");
-      }
+    }
 
-      @Test
-      public void testCopy_withReplaceExisting_cantReplaceNonEmptyDirectory() throws IOException {
+    @Test
+    public void testCopy_withReplaceExisting_cantReplaceNonEmptyDirectory() throws IOException {
         Files.createDirectory(path("/foo"));
         Files.createDirectory(path("/foo/bar"));
         Files.createFile(path("/foo/baz"));
@@ -1698,20 +1700,20 @@ public class ZeroFsUnixLikeFileSystemTest extends AbstractZeroFsIntegrationTest 
         Files.createDirectory(path("/test"));
 
         try {
-          Files.copy(path("/test"), path("/foo"), REPLACE_EXISTING);
-          fail();
+            Files.copy(path("/test"), path("/foo"), REPLACE_EXISTING);
+            fail();
         } catch (DirectoryNotEmptyException expected) {
-          assertEquals("/foo", expected.getMessage());
+            assertEquals("/foo", expected.getMessage());
         }
 
         Files.delete(path("/test"));
         Files.createFile(path("/test"));
 
         try {
-          Files.copy(path("/test"), path("/foo"), REPLACE_EXISTING);
-          fail();
+            Files.copy(path("/test"), path("/foo"), REPLACE_EXISTING);
+            fail();
         } catch (DirectoryNotEmptyException expected) {
-          assertEquals("/foo", expected.getMessage());
+            assertEquals("/foo", expected.getMessage());
         }
 
         Files.delete(path("/foo/baz"));
@@ -1719,20 +1721,20 @@ public class ZeroFsUnixLikeFileSystemTest extends AbstractZeroFsIntegrationTest 
 
         Files.copy(path("/test"), path("/foo"), REPLACE_EXISTING);
         assertThatPath("/foo").isRegularFile(); // replaced
-      }
+    }
 
-      @Test
-      public void testCopy_directoryToPath_doesNotCopyDirectoryContents() throws IOException {
+    @Test
+    public void testCopy_directoryToPath_doesNotCopyDirectoryContents() throws IOException {
         Files.createDirectory(path("/foo"));
         Files.createDirectory(path("/foo/baz"));
         Files.createFile(path("/foo/test"));
 
         Files.copy(path("/foo"), path("/bar"));
         assertThatPath("/bar").hasNoChildren();
-      }
+    }
 
-      @Test
-      public void testCopy_symbolicLinkToPath() throws IOException {
+    @Test
+    public void testCopy_symbolicLinkToPath() throws IOException {
         byte[] bytes = preFilledBytes(128);
         Files.write(path("/test"), bytes);
         Files.createSymbolicLink(path("/link"), path("/test"));
@@ -1751,69 +1753,71 @@ public class ZeroFsUnixLikeFileSystemTest extends AbstractZeroFsIntegrationTest 
         Files.delete(path("/test"));
         assertThatPath("/bar", NOFOLLOW_LINKS).isSymbolicLink();
         assertThatPath("/bar").doesNotExist();
-      }
+    }
 
-      @Test
-      public void testCopy_toDifferentFileSystem() throws IOException {
+    @Test
+    public void testCopy_toDifferentFileSystem() throws IOException {
         try (FileSystem fs2 = ZeroFs.newFileSystem(UNIX_CONFIGURATION)) {
-          Path foo = fs.getPath("/foo");
-          byte[] bytes = {0, 1, 2, 3, 4};
-          Files.write(foo, bytes);
+            Path foo = fs.getPath("/foo");
+            byte[] bytes = {0, 1, 2, 3, 4};
+            Files.write(foo, bytes);
 
-          Path foo2 = fs2.getPath("/foo");
-          Files.copy(foo, foo2);
+            Path foo2 = fs2.getPath("/foo");
+            Files.copy(foo, foo2);
 
-          this.assertThatPath(foo).exists();
-          this.assertThatPath(foo2).exists().and().containsBytes(bytes);
+            this.assertThatPath(foo).exists();
+            this.assertThatPath(foo2).exists().and().containsBytes(bytes);
         }
-      }
+    }
 
-      @Test
-      public void testCopy_toDifferentFileSystem_copyAttributes() throws IOException {
+    @Test
+    public void testCopy_toDifferentFileSystem_copyAttributes() throws IOException {
         try (FileSystem fs2 = ZeroFs.newFileSystem(UNIX_CONFIGURATION)) {
-          Path foo = fs.getPath("/foo");
-          byte[] bytes = {0, 1, 2, 3, 4};
-          Files.write(foo, bytes);
-          Files.getFileAttributeView(foo, BasicFileAttributeView.class)
-              .setTimes(FileTime.fromMillis(0), FileTime.fromMillis(1), FileTime.fromMillis(2));
+            Path foo = fs.getPath("/foo");
+            byte[] bytes = {0, 1, 2, 3, 4};
+            Files.write(foo, bytes);
+            Files.getFileAttributeView(foo, BasicFileAttributeView.class)
+                    .setTimes(
+                            FileTime.fromMillis(0), FileTime.fromMillis(1), FileTime.fromMillis(2));
 
-          UserPrincipal owner =
-     fs.getUserPrincipalLookupService().lookupPrincipalByName("foobar");
-          Files.setOwner(foo, owner);
+            UserPrincipal owner =
+                    fs.getUserPrincipalLookupService().lookupPrincipalByName("foobar");
+            Files.setOwner(foo, owner);
 
-          this.assertThatPath(foo).attribute("owner:owner").is(owner);
+            this.assertThatPath(foo).attribute("owner:owner").is(owner);
 
-          Path foo2 = fs2.getPath("/foo");
-          Files.copy(foo, foo2, COPY_ATTRIBUTES);
+            Path foo2 = fs2.getPath("/foo");
+            Files.copy(foo, foo2, COPY_ATTRIBUTES);
 
-          this.assertThatPath(foo).exists();
+            this.assertThatPath(foo).exists();
 
-          // when copying with COPY_ATTRIBUTES to a different FileSystem, only basic attributes(that
-          // is, file times) can actually be copied
-          this.assertThatPath(foo2)
-              .exists()
-              .and()
-              .attribute("lastModifiedTime")
-              .is(FileTime.fromMillis(0))
-              .and()
-              .attribute("lastAccessTime")
-              .is(FileTime.fromMillis(1))
-              .and()
-              .attribute("creationTime")
-              .is(FileTime.fromMillis(2))
-              .and()
-              .attribute("owner:owner")
-              .isNot(owner)
-              .and()
-              .attribute("owner:owner")
-              .isNot(fs2.getUserPrincipalLookupService().lookupPrincipalByName("foobar"))
-              .and()
-              .containsBytes(bytes); // do this last; it updates the access time
+            // when copying with COPY_ATTRIBUTES to a different FileSystem, only basic
+            // attributes(that
+            // is, file times) can actually be copied
+            this.assertThatPath(foo2)
+                    .exists()
+                    .and()
+                    .attribute("lastModifiedTime")
+                    .is(FileTime.fromMillis(0))
+                    .and()
+                    .attribute("lastAccessTime")
+                    .is(FileTime.fromMillis(1))
+                    .and()
+                    .attribute("creationTime")
+                    .is(FileTime.fromMillis(2))
+                    .and()
+                    .attribute("owner:owner")
+                    .isNot(owner)
+                    .and()
+                    .attribute("owner:owner")
+                    .isNot(fs2.getUserPrincipalLookupService().lookupPrincipalByName("foobar"))
+                    .and()
+                    .containsBytes(bytes); // do this last; it updates the access time
         }
-      }
+    }
 
-      @Test
-      public void testMove() throws IOException {
+    @Test
+    public void testMove() throws IOException {
         byte[] bytes = preFilledBytes(100);
         Files.write(path("/foo"), bytes);
 
@@ -1833,10 +1837,10 @@ public class ZeroFsUnixLikeFileSystemTest extends AbstractZeroFsIntegrationTest 
         assertThatPath("/foo").doesNotExist();
         assertThatPath("/baz").isDirectory();
         assertThatPath("/baz/bar").isRegularFile();
-      }
+    }
 
-      @Test
-      public void testMove_movesSymbolicLinkNotTarget() throws IOException {
+    @Test
+    public void testMove_movesSymbolicLinkNotTarget() throws IOException {
         byte[] bytes = preFilledBytes(100);
         Files.write(path("/foo.txt"), bytes);
 
@@ -1851,17 +1855,17 @@ public class ZeroFsUnixLikeFileSystemTest extends AbstractZeroFsIntegrationTest 
         this.assertThatPath(path("/link.txt")).noFollowLinks().isSymbolicLink();
 
         this.assertThatPath(path("/link.txt")).isRegularFile().and().containsBytes(bytes);
-      }
+    }
 
-      @Test
-      public void testMove_cannotMoveDirIntoOwnSubtree() throws IOException {
+    @Test
+    public void testMove_cannotMoveDirIntoOwnSubtree() throws IOException {
         Files.createDirectories(path("/foo"));
 
         try {
-          Files.move(path("/foo"), path("/foo/bar"));
-          fail();
+            Files.move(path("/foo"), path("/foo/bar"));
+            fail();
         } catch (IOException expected) {
-          assertTrue(expected.getMessage().contains("sub"));
+            assertTrue(expected.getMessage().contains("sub"));
         }
 
         Files.createDirectories(path("/foo/bar/baz/stuff"));
@@ -1869,15 +1873,15 @@ public class ZeroFsUnixLikeFileSystemTest extends AbstractZeroFsIntegrationTest 
         Files.createSymbolicLink(path("/hello/world/link"), path("../../foo/bar/baz"));
 
         try {
-          Files.move(path("/foo/bar"), path("/hello/world/link/bar"));
-          fail();
+            Files.move(path("/foo/bar"), path("/hello/world/link/bar"));
+            fail();
         } catch (IOException expected) {
-          assertTrue(expected.getMessage().contains("sub"));
+            assertTrue(expected.getMessage().contains("sub"));
         }
-      }
+    }
 
-      @Test
-      public void testMove_withoutReplaceExisting_failsWhenTargetExists() throws IOException {
+    @Test
+    public void testMove_withoutReplaceExisting_failsWhenTargetExists() throws IOException {
         byte[] bytes = preFilledBytes(50);
         Files.write(path("/test"), bytes);
 
@@ -1886,10 +1890,10 @@ public class ZeroFsUnixLikeFileSystemTest extends AbstractZeroFsIntegrationTest 
         Files.createFile(path("/bar"));
 
         try {
-          Files.move(path("/test"), path("/bar"), ATOMIC_MOVE);
-          fail();
+            Files.move(path("/test"), path("/bar"), ATOMIC_MOVE);
+            fail();
         } catch (FileAlreadyExistsException expected) {
-          assertEquals("/bar", expected.getMessage());
+            assertEquals("/bar", expected.getMessage());
         }
 
         assertThatPath("/test").containsBytes(bytes).and().attribute("fileKey").is(testKey);
@@ -1898,46 +1902,47 @@ public class ZeroFsUnixLikeFileSystemTest extends AbstractZeroFsIntegrationTest 
         Files.createDirectory(path("/bar"));
 
         try {
-          Files.move(path("/test"), path("/bar"), ATOMIC_MOVE);
-          fail();
+            Files.move(path("/test"), path("/bar"), ATOMIC_MOVE);
+            fail();
         } catch (FileAlreadyExistsException expected) {
-          assertEquals("/bar", expected.getMessage());
+            assertEquals("/bar", expected.getMessage());
         }
 
         assertThatPath("/test").containsBytes(bytes).and().attribute("fileKey").is(testKey);
-      }
+    }
 
-      @Test
-      public void testMove_toDifferentFileSystem() throws IOException {
+    @Test
+    public void testMove_toDifferentFileSystem() throws IOException {
         try (FileSystem fs2 = ZeroFs.newFileSystem(Configuration.unix())) {
-          Path foo = fs.getPath("/foo");
-          byte[] bytes = {0, 1, 2, 3, 4};
-          Files.write(foo, bytes);
-          Files.getFileAttributeView(foo, BasicFileAttributeView.class)
-              .setTimes(FileTime.fromMillis(0), FileTime.fromMillis(1), FileTime.fromMillis(2));
+            Path foo = fs.getPath("/foo");
+            byte[] bytes = {0, 1, 2, 3, 4};
+            Files.write(foo, bytes);
+            Files.getFileAttributeView(foo, BasicFileAttributeView.class)
+                    .setTimes(
+                            FileTime.fromMillis(0), FileTime.fromMillis(1), FileTime.fromMillis(2));
 
-          Path foo2 = fs2.getPath("/foo");
-          Files.move(foo, foo2);
+            Path foo2 = fs2.getPath("/foo");
+            Files.move(foo, foo2);
 
-          this.assertThatPath(foo).doesNotExist();
-          this.assertThatPath(foo2)
-              .exists()
-              .and()
-              .attribute("lastModifiedTime")
-              .is(FileTime.fromMillis(0))
-              .and()
-              .attribute("lastAccessTime")
-              .is(FileTime.fromMillis(1))
-              .and()
-              .attribute("creationTime")
-              .is(FileTime.fromMillis(2))
-              .and()
-              .containsBytes(bytes); // do this last; it updates the access time
+            this.assertThatPath(foo).doesNotExist();
+            this.assertThatPath(foo2)
+                    .exists()
+                    .and()
+                    .attribute("lastModifiedTime")
+                    .is(FileTime.fromMillis(0))
+                    .and()
+                    .attribute("lastAccessTime")
+                    .is(FileTime.fromMillis(1))
+                    .and()
+                    .attribute("creationTime")
+                    .is(FileTime.fromMillis(2))
+                    .and()
+                    .containsBytes(bytes); // do this last; it updates the access time
         }
-      }
+    }
 
-      @Test
-      public void testIsSameFile() throws IOException {
+    @Test
+    public void testIsSameFile() throws IOException {
         Files.createDirectory(path("/foo"));
         Files.createSymbolicLink(path("/bar"), path("/foo"));
         Files.createFile(path("/bar/test"));
@@ -1954,18 +1959,18 @@ public class ZeroFsUnixLikeFileSystemTest extends AbstractZeroFsIntegrationTest 
         Files.createSymbolicLink(path("/baz"), path("bar")); // relative path
         assertThatPath("/baz").isSameFileAs("/foo");
         assertThatPath("/baz/test").isSameFileAs("/foo/test");
-      }
+    }
 
-      @Test
-      public void testIsSameFile_forPathFromDifferentFileSystemProvider() throws IOException {
+    @Test
+    public void testIsSameFile_forPathFromDifferentFileSystemProvider() throws IOException {
         Path defaultFileSystemRoot =
-     FileSystems.getDefault().getRootDirectories().iterator().next();
+                FileSystems.getDefault().getRootDirectories().iterator().next();
 
         assertFalse(Files.isSameFile(path("/"), defaultFileSystemRoot));
-      }
+    }
 
-      @Test
-      public void testPathLookups() throws IOException {
+    @Test
+    public void testPathLookups() throws IOException {
         assertThatPath("/").isSameFileAs("/");
         assertThatPath("/..").isSameFileAs("/");
         assertThatPath("/../../..").isSameFileAs("/");
@@ -1977,432 +1982,443 @@ public class ZeroFsUnixLikeFileSystemTest extends AbstractZeroFsIntegrationTest 
         Files.createSymbolicLink(path("/foo/link2"), path("/"));
 
         assertThatPath("/foo/bar/link1/foo/bar/link1/foo").isSameFileAs("/foo");
-      }
+    }
 
-      @Test
-      public void testSecureDirectoryStream() throws IOException {
+    @Test
+    public void testSecureDirectoryStream() throws IOException {
         Files.createDirectories(path("/foo/bar"));
         Files.createFile(path("/foo/a"));
         Files.createFile(path("/foo/b"));
         Files.createSymbolicLink(path("/foo/barLink"), path("bar"));
 
         try (DirectoryStream<Path> stream = Files.newDirectoryStream(path("/foo"))) {
-          if (!(stream instanceof SecureDirectoryStream)) {
-            fail("should be a secure directory stream");
-          }
+            if (!(stream instanceof SecureDirectoryStream)) {
+                fail("should be a secure directory stream");
+            }
 
-          SecureDirectoryStream<Path> secureStream = (SecureDirectoryStream<Path>) stream;
-          Iterator<Path> secureStreamIter = secureStream.iterator();
-          List<Path> secureStreamList = new ArrayList<>();
-          while (secureStreamIter.hasNext()) {
-              secureStreamList.add(secureStreamIter.next());
-          }
+            SecureDirectoryStream<Path> secureStream = (SecureDirectoryStream<Path>) stream;
+            Iterator<Path> secureStreamIter = secureStream.iterator();
+            List<Path> secureStreamList = new ArrayList<>();
+            while (secureStreamIter.hasNext()) {
+                secureStreamList.add(secureStreamIter.next());
+            }
 
-          assertEquals(List.of(
-                  path("/foo/a"), path("/foo/b"), path("/foo/bar"), path("/foo/barLink")), secureStreamList);
+            assertEquals(
+                    List.of(path("/foo/a"), path("/foo/b"), path("/foo/bar"), path("/foo/barLink")),
+                    secureStreamList);
 
-          secureStream.deleteFile(path("b"));
-          assertThatPath("/foo/b").doesNotExist();
+            secureStream.deleteFile(path("b"));
+            assertThatPath("/foo/b").doesNotExist();
 
-          secureStream.newByteChannel(path("b"), Set.of(WRITE, CREATE_NEW)).close();
-          assertThatPath("/foo/b").isRegularFile();
+            secureStream.newByteChannel(path("b"), Set.of(WRITE, CREATE_NEW)).close();
+            assertThatPath("/foo/b").isRegularFile();
 
-          assertThatPath("/foo").hasChildren("a", "b", "bar", "barLink");
+            assertThatPath("/foo").hasChildren("a", "b", "bar", "barLink");
 
-          Files.createDirectory(path("/baz"));
-          Files.move(path("/foo"), path("/baz/stuff"));
+            Files.createDirectory(path("/baz"));
+            Files.move(path("/foo"), path("/baz/stuff"));
 
-          this.assertThatPath(path("/foo")).doesNotExist();
+            this.assertThatPath(path("/foo")).doesNotExist();
 
-          assertThatPath("/baz/stuff").hasChildren("a", "b", "bar", "barLink");
+            assertThatPath("/baz/stuff").hasChildren("a", "b", "bar", "barLink");
 
-          secureStream.deleteFile(path("b"));
+            secureStream.deleteFile(path("b"));
 
-          assertThatPath("/baz/stuff/b").doesNotExist();
-          assertThatPath("/baz/stuff").hasChildren("a", "bar", "barLink");
-
-          assertTrue(
-                  secureStream
-                      .getFileAttributeView(BasicFileAttributeView.class)
-                      .readAttributes()
-                      .isDirectory());
-
-          assertTrue(
-                  secureStream
-                      .getFileAttributeView(path("a"), BasicFileAttributeView.class)
-                      .readAttributes()
-                      .isRegularFile());
-
-          try {
-            secureStream.deleteFile(path("bar"));
-            fail();
-          } catch (FileSystemException expected) {
-            assertEquals("bar", expected.getFile());
-          }
-
-          try {
-            secureStream.deleteDirectory(path("a"));
-            fail();
-          } catch (FileSystemException expected) {
-            assertEquals("a", expected.getFile());
-          }
-
-          try (SecureDirectoryStream<Path> barStream =
-     secureStream.newDirectoryStream(path("bar"))) {
-            barStream.newByteChannel(path("stuff"), Set.of(WRITE, CREATE_NEW)).close();
-            assertTrue(
-                    barStream
-                        .getFileAttributeView(path("stuff"), BasicFileAttributeView.class)
-                        .readAttributes()
-                        .isRegularFile());
+            assertThatPath("/baz/stuff/b").doesNotExist();
+            assertThatPath("/baz/stuff").hasChildren("a", "bar", "barLink");
 
             assertTrue(
                     secureStream
-                        .getFileAttributeView(path("bar/stuff"), BasicFileAttributeView.class)
-                        .readAttributes()
-                        .isRegularFile());
-          }
-
-          try (SecureDirectoryStream<Path> barLinkStream =
-              secureStream.newDirectoryStream(path("barLink"))) {
-            assertTrue(
-                    barLinkStream
-                        .getFileAttributeView(path("stuff"), BasicFileAttributeView.class)
-                        .readAttributes()
-                        .isRegularFile());
+                            .getFileAttributeView(BasicFileAttributeView.class)
+                            .readAttributes()
+                            .isDirectory());
 
             assertTrue(
-                    barLinkStream
-                        .getFileAttributeView(path(".."), BasicFileAttributeView.class)
-                        .readAttributes()
-                        .isDirectory());
-          }
+                    secureStream
+                            .getFileAttributeView(path("a"), BasicFileAttributeView.class)
+                            .readAttributes()
+                            .isRegularFile());
 
-          try {
-            secureStream.newDirectoryStream(path("barLink"), NOFOLLOW_LINKS);
-            fail();
-          } catch (NotDirectoryException expected) {
-            assertEquals("barLink", expected.getFile());
-          }
+            try {
+                secureStream.deleteFile(path("bar"));
+                fail();
+            } catch (FileSystemException expected) {
+                assertEquals("bar", expected.getFile());
+            }
 
-          try (SecureDirectoryStream<Path> barStream =
-     secureStream.newDirectoryStream(path("bar"))) {
-            secureStream.move(path("a"), barStream, path("moved"));
+            try {
+                secureStream.deleteDirectory(path("a"));
+                fail();
+            } catch (FileSystemException expected) {
+                assertEquals("a", expected.getFile());
+            }
 
-            this.assertThatPath(path("/baz/stuff/a")).doesNotExist();
-            this.assertThatPath(path("/baz/stuff/bar/moved")).isRegularFile();
+            try (SecureDirectoryStream<Path> barStream =
+                    secureStream.newDirectoryStream(path("bar"))) {
+                barStream.newByteChannel(path("stuff"), Set.of(WRITE, CREATE_NEW)).close();
+                assertTrue(
+                        barStream
+                                .getFileAttributeView(path("stuff"), BasicFileAttributeView.class)
+                                .readAttributes()
+                                .isRegularFile());
 
-            assertTrue(
-                    barStream
-                        .getFileAttributeView(path("moved"), BasicFileAttributeView.class)
-                        .readAttributes()
-                        .isRegularFile());
-          }
+                assertTrue(
+                        secureStream
+                                .getFileAttributeView(
+                                        path("bar/stuff"), BasicFileAttributeView.class)
+                                .readAttributes()
+                                .isRegularFile());
+            }
+
+            try (SecureDirectoryStream<Path> barLinkStream =
+                    secureStream.newDirectoryStream(path("barLink"))) {
+                assertTrue(
+                        barLinkStream
+                                .getFileAttributeView(path("stuff"), BasicFileAttributeView.class)
+                                .readAttributes()
+                                .isRegularFile());
+
+                assertTrue(
+                        barLinkStream
+                                .getFileAttributeView(path(".."), BasicFileAttributeView.class)
+                                .readAttributes()
+                                .isDirectory());
+            }
+
+            try {
+                secureStream.newDirectoryStream(path("barLink"), NOFOLLOW_LINKS);
+                fail();
+            } catch (NotDirectoryException expected) {
+                assertEquals("barLink", expected.getFile());
+            }
+
+            try (SecureDirectoryStream<Path> barStream =
+                    secureStream.newDirectoryStream(path("bar"))) {
+                secureStream.move(path("a"), barStream, path("moved"));
+
+                this.assertThatPath(path("/baz/stuff/a")).doesNotExist();
+                this.assertThatPath(path("/baz/stuff/bar/moved")).isRegularFile();
+
+                assertTrue(
+                        barStream
+                                .getFileAttributeView(path("moved"), BasicFileAttributeView.class)
+                                .readAttributes()
+                                .isRegularFile());
+            }
         }
-      }
+    }
 
-//      @Test
-//      public void testSecureDirectoryStreamBasedOnRelativePath() throws IOException {
-//        Files.createDirectories(path("foo"));
-//        Files.createFile(path("foo/a"));
-//        Files.createFile(path("foo/b"));
-//        Files.createDirectory(path("foo/c"));
-//        Files.createFile(path("foo/c/d"));
-//        Files.createFile(path("foo/c/e"));
-//
-//        try (DirectoryStream<Path> stream = Files.newDirectoryStream(path("foo"))) {
-//          SecureDirectoryStream<Path> secureStream = (SecureDirectoryStream<Path>) stream;
-//
-//          assertEquals(ImmutableList.copyOf(secureStream))
-//              .containsExactly(path("foo/a"), path("foo/b"), path("foo/c"));
-//
-//          try (DirectoryStream<Path> stream2 = secureStream.newDirectoryStream(path("c"))) {
-//            assertEquals(ImmutableList.copyOf(stream2)).containsExactly(path("foo/c/d"),
-//     path("foo/c/e"));
-//          }
-//        }
-//      }
-//
-//      @SuppressWarnings("StreamResourceLeak")
-//      @Test
-//      public void testClosedSecureDirectoryStream() throws IOException {
-//        Files.createDirectory(path("/foo"));
-//        SecureDirectoryStream<Path> stream =
-//            (SecureDirectoryStream<Path>) Files.newDirectoryStream(path("/foo"));
-//
-//        stream.close();
-//
-//        try {
-//          stream.iterator();
-//          fail("expected ClosedDirectoryStreamException");
-//        } catch (ClosedDirectoryStreamException expected) {
-//        }
-//
-//        try {
-//          stream.deleteDirectory(fs.getPath("a"));
-//          fail("expected ClosedDirectoryStreamException");
-//        } catch (ClosedDirectoryStreamException expected) {
-//        }
-//
-//        try {
-//          stream.deleteFile(fs.getPath("a"));
-//          fail("expected ClosedDirectoryStreamException");
-//        } catch (ClosedDirectoryStreamException expected) {
-//        }
-//
-//        try {
-//          stream.newByteChannel(fs.getPath("a"), ImmutableSet.of(CREATE, WRITE));
-//          fail("expected ClosedDirectoryStreamException");
-//        } catch (ClosedDirectoryStreamException expected) {
-//        }
-//
-//        try {
-//          stream.newDirectoryStream(fs.getPath("a"));
-//          fail("expected ClosedDirectoryStreamException");
-//        } catch (ClosedDirectoryStreamException expected) {
-//        }
-//
-//        try {
-//          stream.move(fs.getPath("a"), stream, fs.getPath("b"));
-//          fail("expected ClosedDirectoryStreamException");
-//        } catch (ClosedDirectoryStreamException expected) {
-//        }
-//
-//        try {
-//          stream.getFileAttributeView(BasicFileAttributeView.class);
-//          fail("expected ClosedDirectoryStreamException");
-//        } catch (ClosedDirectoryStreamException expected) {
-//        }
-//
-//        try {
-//          stream.getFileAttributeView(fs.getPath("a"), BasicFileAttributeView.class);
-//          fail("expected ClosedDirectoryStreamException");
-//        } catch (ClosedDirectoryStreamException expected) {
-//        }
-//      }
-//
-//      @SuppressWarnings("StreamResourceLeak")
-//      @Test
-//      public void testClosedSecureDirectoryStreamAttributeViewAndIterator() throws IOException {
-//        Files.createDirectory(path("/foo"));
-//        Files.createDirectory(path("/foo/bar"));
-//        SecureDirectoryStream<Path> stream =
-//            (SecureDirectoryStream<Path>) Files.newDirectoryStream(path("/foo"));
-//
-//        Iterator<Path> iter = stream.iterator();
-//        BasicFileAttributeView view1 = stream.getFileAttributeView(BasicFileAttributeView.class);
-//        BasicFileAttributeView view2 =
-//            stream.getFileAttributeView(path("bar"), BasicFileAttributeView.class);
-//
-//        try {
-//          stream.iterator();
-//          fail("expected IllegalStateException");
-//        } catch (IllegalStateException expected) {
-//        }
-//
-//        stream.close();
-//
-//        try {
-//          iter.next();
-//          fail("expected ClosedDirectoryStreamException");
-//        } catch (ClosedDirectoryStreamException expected) {
-//        }
-//
-//        try {
-//          view1.readAttributes();
-//          fail("expected ClosedDirectoryStreamException");
-//        } catch (ClosedDirectoryStreamException expected) {
-//        }
-//
-//        try {
-//          view2.readAttributes();
-//          fail("expected ClosedDirectoryStreamException");
-//        } catch (ClosedDirectoryStreamException expected) {
-//        }
-//
-//        try {
-//          view1.setTimes(null, null, null);
-//          fail("expected ClosedDirectoryStreamException");
-//        } catch (ClosedDirectoryStreamException expected) {
-//        }
-//
-//        try {
-//          view2.setTimes(null, null, null);
-//          fail("expected ClosedDirectoryStreamException");
-//        } catch (ClosedDirectoryStreamException expected) {
-//        }
-//      }
-//
-//      @Test
-//      public void testDirectoryAccessAndModifiedTimeUpdates() throws IOException {
-//        Files.createDirectories(path("/foo/bar"));
-//        FileTimeTester tester = new FileTimeTester(path("/foo/bar"));
-//        tester.assertAccessTimeDidNotChange();
-//        tester.assertModifiedTimeDidNotChange();
-//
-//        // TODO(cgdecker): Use a Clock for file times so I can test this reliably without sleeping
-//        Uninterruptibles.sleepUninterruptibly(1, MILLISECONDS);
-//        Files.createFile(path("/foo/bar/baz.txt"));
-//
-//        tester.assertAccessTimeDidNotChange();
-//        tester.assertModifiedTimeChanged();
-//
-//        Uninterruptibles.sleepUninterruptibly(1, MILLISECONDS);
-//        // access time is updated by reading the full contents of the directory
-//        // not just by doing a lookup in it
-//        try (DirectoryStream<Path> stream = Files.newDirectoryStream(path("/foo/bar"))) {
-//          // iterate the stream, forcing the directory to actually be read
-//          Iterators.advance(stream.iterator(), Integer.MAX_VALUE);
-//        }
-//
-//        tester.assertAccessTimeChanged();
-//        tester.assertModifiedTimeDidNotChange();
-//
-//        Uninterruptibles.sleepUninterruptibly(1, MILLISECONDS);
-//        Files.move(path("/foo/bar/baz.txt"), path("/foo/bar/baz2.txt"));
-//
-//        tester.assertAccessTimeDidNotChange();
-//        tester.assertModifiedTimeChanged();
-//
-//        Uninterruptibles.sleepUninterruptibly(1, MILLISECONDS);
-//        Files.delete(path("/foo/bar/baz2.txt"));
-//
-//        tester.assertAccessTimeDidNotChange();
-//        tester.assertModifiedTimeChanged();
-//      }
-//
-//      @Test
-//      public void testRegularFileAccessAndModifiedTimeUpdates() throws IOException {
-//        Path foo = path("foo");
-//        Files.createFile(foo);
-//
-//        FileTimeTester tester = new FileTimeTester(foo);
-//        tester.assertAccessTimeDidNotChange();
-//        tester.assertModifiedTimeDidNotChange();
-//
-//        Uninterruptibles.sleepUninterruptibly(1, MILLISECONDS);
-//        try (FileChannel channel = FileChannel.open(foo, READ)) {
-//          // opening READ channel does not change times
-//          tester.assertAccessTimeDidNotChange();
-//          tester.assertModifiedTimeDidNotChange();
-//
-//          Uninterruptibles.sleepUninterruptibly(1, MILLISECONDS);
-//          channel.read(ByteBuffer.allocate(100));
-//
-//          // read call on channel does
-//          tester.assertAccessTimeChanged();
-//          tester.assertModifiedTimeDidNotChange();
-//
-//          Uninterruptibles.sleepUninterruptibly(1, MILLISECONDS);
-//          channel.read(ByteBuffer.allocate(100));
-//
-//          tester.assertAccessTimeChanged();
-//          tester.assertModifiedTimeDidNotChange();
-//
-//          Uninterruptibles.sleepUninterruptibly(1, MILLISECONDS);
-//          try {
-//            channel.write(ByteBuffer.wrap(new byte[] {0, 1, 2, 3}));
-//          } catch (NonWritableChannelException ignore) {
-//          }
-//
-//          // failed write on non-readable channel does not change times
-//          tester.assertAccessTimeDidNotChange();
-//          tester.assertModifiedTimeDidNotChange();
-//
-//          Uninterruptibles.sleepUninterruptibly(1, MILLISECONDS);
-//        }
-//
-//        // closing channel does not change times
-//        tester.assertAccessTimeDidNotChange();
-//        tester.assertModifiedTimeDidNotChange();
-//
-//        Uninterruptibles.sleepUninterruptibly(1, MILLISECONDS);
-//        try (FileChannel channel = FileChannel.open(foo, WRITE)) {
-//          // opening WRITE channel does not change times
-//          tester.assertAccessTimeDidNotChange();
-//          tester.assertModifiedTimeDidNotChange();
-//
-//          Uninterruptibles.sleepUninterruptibly(1, MILLISECONDS);
-//          channel.write(ByteBuffer.wrap(new byte[] {0, 1, 2, 3}));
-//
-//          // write call on channel does
-//          tester.assertAccessTimeDidNotChange();
-//          tester.assertModifiedTimeChanged();
-//
-//          Uninterruptibles.sleepUninterruptibly(1, MILLISECONDS);
-//          channel.write(ByteBuffer.wrap(new byte[] {4, 5, 6, 7}));
-//
-//          tester.assertAccessTimeDidNotChange();
-//          tester.assertModifiedTimeChanged();
-//
-//          Uninterruptibles.sleepUninterruptibly(1, MILLISECONDS);
-//          try {
-//            channel.read(ByteBuffer.allocate(100));
-//          } catch (NonReadableChannelException ignore) {
-//          }
-//
-//          // failed read on non-readable channel does not change times
-//          tester.assertAccessTimeDidNotChange();
-//          tester.assertModifiedTimeDidNotChange();
-//
-//          Uninterruptibles.sleepUninterruptibly(1, MILLISECONDS);
-//        }
-//
-//        // closing channel does not change times
-//        tester.assertAccessTimeDidNotChange();
-//        tester.assertModifiedTimeDidNotChange();
-//      }
-//
-//      @Test
-//      public void testUnsupportedFeatures() throws IOException {
-//        FileSystem fileSystem =
-//            ZeroFs.newFileSystem(
-//                Configuration.unix().toBuilder()
-//                    .setSupportedFeatures() // none
-//                    .build());
-//
-//        Path foo = fileSystem.getPath("foo");
-//        Path bar = foo.resolveSibling("bar");
-//
-//        try {
-//          Files.createLink(foo, bar);
-//          fail();
-//        } catch (UnsupportedOperationException expected) {
-//        }
-//
-//        try {
-//          Files.createSymbolicLink(foo, bar);
-//          fail();
-//        } catch (UnsupportedOperationException expected) {
-//        }
-//
-//        try {
-//          Files.readSymbolicLink(foo);
-//          fail();
-//        } catch (UnsupportedOperationException expected) {
-//        }
-//
-//        try {
-//          FileChannel.open(foo);
-//          fail();
-//        } catch (UnsupportedOperationException expected) {
-//        }
-//
-//        try {
-//          AsynchronousFileChannel.open(foo);
-//          fail();
-//        } catch (UnsupportedOperationException expected) {
-//        }
-//
-//        Files.createDirectory(foo);
-//        Files.createFile(bar);
-//
-//        try (DirectoryStream<Path> stream = Files.newDirectoryStream(foo)) {
-//          assertEquals(stream).isNotInstanceOf(SecureDirectoryStream.class);
-//        }
-//
-//        try (SeekableByteChannel channel = Files.newByteChannel(bar)) {
-//          assertEquals(channel).isNotInstanceOf(FileChannel.class);
-//        }
-//      }
+    @Test
+    public void testSecureDirectoryStreamBasedOnRelativePath() throws IOException {
+        Files.createDirectories(path("foo"));
+        Files.createFile(path("foo/a"));
+        Files.createFile(path("foo/b"));
+        Files.createDirectory(path("foo/c"));
+        Files.createFile(path("foo/c/d"));
+        Files.createFile(path("foo/c/e"));
+
+        try (DirectoryStream<Path> stream = Files.newDirectoryStream(path("foo"))) {
+            SecureDirectoryStream<Path> secureStream = (SecureDirectoryStream<Path>) stream;
+            Iterator<Path> secureStreamIter = secureStream.iterator();
+            List<Path> secureStreamList = new ArrayList<>();
+            while (secureStreamIter.hasNext()) {
+                secureStreamList.add(secureStreamIter.next());
+            }
+
+            assertEquals(List.of(path("foo/a"), path("foo/b"), path("foo/c")), secureStreamList);
+
+            try (DirectoryStream<Path> stream2 = secureStream.newDirectoryStream(path("c"))) {
+                Iterator<Path> secureStream2Iter = stream2.iterator();
+                List<Path> secureStream2List = new ArrayList<>();
+                while (secureStream2Iter.hasNext()) {
+                    secureStream2List.add(secureStream2Iter.next());
+                }
+                assertEquals(List.of(path("foo/c/d"), path("foo/c/e")), secureStream2List);
+            }
+        }
+    }
+
+    @Test
+    public void testClosedSecureDirectoryStream() throws IOException {
+        Files.createDirectory(path("/foo"));
+        SecureDirectoryStream<Path> stream =
+                (SecureDirectoryStream<Path>) Files.newDirectoryStream(path("/foo"));
+
+        stream.close();
+
+        try {
+            stream.iterator();
+            fail("expected ClosedDirectoryStreamException");
+        } catch (ClosedDirectoryStreamException expected) {
+        }
+
+        try {
+            stream.deleteDirectory(fs.getPath("a"));
+            fail("expected ClosedDirectoryStreamException");
+        } catch (ClosedDirectoryStreamException expected) {
+        }
+
+        try {
+            stream.deleteFile(fs.getPath("a"));
+            fail("expected ClosedDirectoryStreamException");
+        } catch (ClosedDirectoryStreamException expected) {
+        }
+
+        try {
+            stream.newByteChannel(fs.getPath("a"), Set.of(CREATE, WRITE));
+            fail("expected ClosedDirectoryStreamException");
+        } catch (ClosedDirectoryStreamException expected) {
+        }
+
+        try {
+            stream.newDirectoryStream(fs.getPath("a"));
+            fail("expected ClosedDirectoryStreamException");
+        } catch (ClosedDirectoryStreamException expected) {
+        }
+
+        try {
+            stream.move(fs.getPath("a"), stream, fs.getPath("b"));
+            fail("expected ClosedDirectoryStreamException");
+        } catch (ClosedDirectoryStreamException expected) {
+        }
+
+        try {
+            stream.getFileAttributeView(BasicFileAttributeView.class);
+            fail("expected ClosedDirectoryStreamException");
+        } catch (ClosedDirectoryStreamException expected) {
+        }
+
+        try {
+            stream.getFileAttributeView(fs.getPath("a"), BasicFileAttributeView.class);
+            fail("expected ClosedDirectoryStreamException");
+        } catch (ClosedDirectoryStreamException expected) {
+        }
+    }
+
+    @Test
+    public void testClosedSecureDirectoryStreamAttributeViewAndIterator() throws IOException {
+        Files.createDirectory(path("/foo"));
+        Files.createDirectory(path("/foo/bar"));
+        SecureDirectoryStream<Path> stream =
+                (SecureDirectoryStream<Path>) Files.newDirectoryStream(path("/foo"));
+
+        Iterator<Path> iter = stream.iterator();
+        BasicFileAttributeView view1 = stream.getFileAttributeView(BasicFileAttributeView.class);
+        BasicFileAttributeView view2 =
+                stream.getFileAttributeView(path("bar"), BasicFileAttributeView.class);
+
+        try {
+            stream.iterator();
+            fail("expected IllegalStateException");
+        } catch (IllegalStateException expected) {
+        }
+
+        stream.close();
+
+        try {
+            iter.next();
+            fail("expected ClosedDirectoryStreamException");
+        } catch (ClosedDirectoryStreamException expected) {
+        }
+
+        try {
+            view1.readAttributes();
+            fail("expected ClosedDirectoryStreamException");
+        } catch (ClosedDirectoryStreamException expected) {
+        }
+
+        try {
+            view2.readAttributes();
+            fail("expected ClosedDirectoryStreamException");
+        } catch (ClosedDirectoryStreamException expected) {
+        }
+
+        try {
+            view1.setTimes(null, null, null);
+            fail("expected ClosedDirectoryStreamException");
+        } catch (ClosedDirectoryStreamException expected) {
+        }
+
+        try {
+            view2.setTimes(null, null, null);
+            fail("expected ClosedDirectoryStreamException");
+        } catch (ClosedDirectoryStreamException expected) {
+        }
+    }
+
+    @Test
+    public void testDirectoryAccessAndModifiedTimeUpdates() throws Exception {
+        Files.createDirectories(path("/foo/bar"));
+        FileTimeTester tester = new FileTimeTester(path("/foo/bar"));
+        tester.assertAccessTimeDidNotChange();
+        tester.assertModifiedTimeDidNotChange();
+
+        // TODO(cgdecker): Use a Clock for file times so I can test this reliably without sleeping
+        Thread.sleep(1);
+        Files.createFile(path("/foo/bar/baz.txt"));
+
+        tester.assertAccessTimeDidNotChange();
+        tester.assertModifiedTimeChanged();
+
+        Thread.sleep(1);
+        // access time is updated by reading the full contents of the directory
+        // not just by doing a lookup in it
+        try (DirectoryStream<Path> stream = Files.newDirectoryStream(path("/foo/bar"))) {
+            // iterate the stream, forcing the directory to actually be read
+            Iterator<Path> streamIter = stream.iterator();
+            while (streamIter.hasNext()) {
+                streamIter.next();
+            }
+        }
+
+        tester.assertAccessTimeChanged();
+        tester.assertModifiedTimeDidNotChange();
+
+        Thread.sleep(1);
+        Files.move(path("/foo/bar/baz.txt"), path("/foo/bar/baz2.txt"));
+
+        tester.assertAccessTimeDidNotChange();
+        tester.assertModifiedTimeChanged();
+
+        Thread.sleep(1);
+        Files.delete(path("/foo/bar/baz2.txt"));
+
+        tester.assertAccessTimeDidNotChange();
+        tester.assertModifiedTimeChanged();
+    }
+
+    @Test
+    public void testRegularFileAccessAndModifiedTimeUpdates() throws Exception {
+        Path foo = path("foo");
+        Files.createFile(foo);
+
+        FileTimeTester tester = new FileTimeTester(foo);
+        tester.assertAccessTimeDidNotChange();
+        tester.assertModifiedTimeDidNotChange();
+
+        Thread.sleep(1);
+        try (FileChannel channel = FileChannel.open(foo, READ)) {
+            // opening READ channel does not change times
+            tester.assertAccessTimeDidNotChange();
+            tester.assertModifiedTimeDidNotChange();
+
+            Thread.sleep(1);
+            channel.read(ByteBuffer.allocate(100));
+
+            // read call on channel does
+            tester.assertAccessTimeChanged();
+            tester.assertModifiedTimeDidNotChange();
+
+            Thread.sleep(1);
+            channel.read(ByteBuffer.allocate(100));
+
+            tester.assertAccessTimeChanged();
+            tester.assertModifiedTimeDidNotChange();
+
+            Thread.sleep(1);
+            try {
+                channel.write(ByteBuffer.wrap(new byte[] {0, 1, 2, 3}));
+            } catch (NonWritableChannelException ignore) {
+            }
+
+            // failed write on non-readable channel does not change times
+            tester.assertAccessTimeDidNotChange();
+            tester.assertModifiedTimeDidNotChange();
+
+            Thread.sleep(1);
+        }
+
+        // closing channel does not change times
+        tester.assertAccessTimeDidNotChange();
+        tester.assertModifiedTimeDidNotChange();
+
+        Thread.sleep(1);
+        try (FileChannel channel = FileChannel.open(foo, WRITE)) {
+            // opening WRITE channel does not change times
+            tester.assertAccessTimeDidNotChange();
+            tester.assertModifiedTimeDidNotChange();
+
+            Thread.sleep(1);
+            channel.write(ByteBuffer.wrap(new byte[] {0, 1, 2, 3}));
+
+            // write call on channel does
+            tester.assertAccessTimeDidNotChange();
+            tester.assertModifiedTimeChanged();
+
+            Thread.sleep(1);
+            channel.write(ByteBuffer.wrap(new byte[] {4, 5, 6, 7}));
+
+            tester.assertAccessTimeDidNotChange();
+            tester.assertModifiedTimeChanged();
+
+            Thread.sleep(1);
+            try {
+                channel.read(ByteBuffer.allocate(100));
+            } catch (NonReadableChannelException ignore) {
+            }
+
+            // failed read on non-readable channel does not change times
+            tester.assertAccessTimeDidNotChange();
+            tester.assertModifiedTimeDidNotChange();
+
+            Thread.sleep(1);
+        }
+
+        // closing channel does not change times
+        tester.assertAccessTimeDidNotChange();
+        tester.assertModifiedTimeDidNotChange();
+    }
+
+    @Test
+    public void testUnsupportedFeatures() throws IOException {
+        FileSystem fileSystem =
+                ZeroFs.newFileSystem(
+                        Configuration.unix().toBuilder()
+                                .setSupportedFeatures() // none
+                                .build());
+
+        Path foo = fileSystem.getPath("foo");
+        Path bar = foo.resolveSibling("bar");
+
+        try {
+            Files.createLink(foo, bar);
+            fail();
+        } catch (UnsupportedOperationException expected) {
+        }
+
+        try {
+            Files.createSymbolicLink(foo, bar);
+            fail();
+        } catch (UnsupportedOperationException expected) {
+        }
+
+        try {
+            Files.readSymbolicLink(foo);
+            fail();
+        } catch (UnsupportedOperationException expected) {
+        }
+
+        try {
+            FileChannel.open(foo);
+            fail();
+        } catch (UnsupportedOperationException expected) {
+        }
+
+        try {
+            AsynchronousFileChannel.open(foo);
+            fail();
+        } catch (UnsupportedOperationException expected) {
+        }
+
+        Files.createDirectory(foo);
+        Files.createFile(bar);
+
+        try (DirectoryStream<Path> stream = Files.newDirectoryStream(foo)) {
+            assertFalse(stream instanceof SecureDirectoryStream);
+        }
+
+        try (SeekableByteChannel channel = Files.newByteChannel(bar)) {
+            assertFalse(channel instanceof FileChannel);
+        }
+    }
 }
