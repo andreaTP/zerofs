@@ -4,6 +4,7 @@ import static java.nio.file.LinkOption.NOFOLLOW_LINKS;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 
 import java.io.IOException;
+import java.io.Reader;
 import java.nio.ByteBuffer;
 import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
@@ -174,4 +175,15 @@ public final class TestUtils {
         }
         return list;
     }
+
+    public static String readAll(Reader reader) throws IOException {
+        StringBuilder sb = new StringBuilder();
+        char[] buffer = new char[1024];
+        int numRead;
+        while ((numRead = reader.read(buffer)) != -1) {
+            sb.append(buffer, 0, numRead);
+        }
+        return sb.toString();
+    }
+
 }
